@@ -1,15 +1,19 @@
 import React from "react";
 import PDF from "pdfjs-dist";
+import Page from "./Components/Page";
 
 export default class ReactPdfJs extends React.Component {
   state = {
     testPdf: "files/quiroga.pdf",
-    loading: 0
+    loading: 0,
+    pagesIndex: []
   };
 
   loadFile() {
-    let loading = this.state.pdf.getDocument({
-      url: this.state.testPdf
+    const { pdf, testPdf } = this.state;
+
+    let loading = pdf.getDocument({
+      url: testPdf
     });
 
     let actual = 0;
@@ -20,6 +24,42 @@ export default class ReactPdfJs extends React.Component {
         loading: actual
       });
     };
+
+    loading.promise.then(pdfProxy => {
+      this.setState({ pdfProxy });
+      this.storePagesInState();
+    });
+  }
+
+  storePagesInState() {
+    const { pdfProxy } = this.state;
+
+    let pages = {};
+    let pagesIndex = [];
+    let allPromises = [];
+
+    for (let i = 0; i < pdfProxy.numPages; i++) {
+      let numPage = i + 1;
+      pagesIndex.push(numPage);
+      pages[numPage] = { num: numPage };
+      allPromises.push(pdfProxy.getPage(numPage));
+    }
+
+    Promise.all(allPromises).then(result => {
+      result.forEach(res => {
+        pages[res.pageNumber] = {
+          obj: res,
+          rendered: false,
+          display: false
+        };
+      });
+      this.setState({ pagesIndex, pages });
+      this.start();
+    });
+  }
+
+  start() {
+    console.log(this.state);
   }
 
   componentWillMount() {
@@ -39,10 +79,14 @@ export default class ReactPdfJs extends React.Component {
   }
 
   render() {
+    const { pagesIndex, pages, loading } = this.state;
     return (
       <div>
         PDF.JS
-        {this.state.loading ? <p>{this.state.loading + "%"}</p> : null}
+        {loading ? <p>{loading + "%"}</p> : null}
+        {pagesIndex.map(number => {
+          return <Page number={number} loaded={false} key={number} />;
+        })}
       </div>
     );
   }
