@@ -3,25 +3,47 @@ import PDF from "pdfjs-dist";
 
 export default class ReactPdfJs extends React.Component {
   state = {
-    pdf: {},
     testPdf: "files/quiroga.pdf",
-    workerSrc:
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.0.943/pdf.worker.js"
+    loading: 0
   };
 
-  componentDidMount() {
-    // Load the file
-    // console.log(PDF);
-    // console.log(this.state.testPdf);
-    PDF.GlobalWorkerOptions.workerSrc = this.state.workerSrc;
-
-    var loading = PDF.getDocument({
+  loadFile() {
+    let loading = this.state.pdf.getDocument({
       url: this.state.testPdf
     });
-    console.log(loading);
+
+    let actual = 0;
+    loading.onProgress = progressData => {
+      let temp = Math.round((progressData.loaded * 100) / progressData.total);
+      actual = temp > 100 ? actual : temp;
+      this.setState({
+        loading: actual
+      });
+    };
+  }
+
+  componentWillMount() {
+    // Use cdn worker
+    var url = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${
+      PDF.version
+    }/pdf.worker.js`;
+    PDF.GlobalWorkerOptions.workerSrc = url;
+
+    this.setState({
+      pdf: PDF
+    });
+  }
+
+  componentDidMount() {
+    this.loadFile();
   }
 
   render() {
-    return <div>PDF.JS</div>;
+    return (
+      <div>
+        PDF.JS
+        {this.state.loading ? <p>{this.state.loading + "%"}</p> : null}
+      </div>
+    );
   }
 }
