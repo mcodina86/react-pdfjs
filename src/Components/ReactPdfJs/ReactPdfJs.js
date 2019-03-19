@@ -1,13 +1,24 @@
 import React from "react";
 import PDF from "pdfjs-dist";
-import Page from "./Components/Page";
+import Page from "./components/Page";
+import Toolbar from "./components/Toolbar";
+import { sendEvent } from "./utils/events";
+import { watchScroll } from "./utils/ui_utils";
+import "./styles.css";
 
 export default class ReactPdfJs extends React.Component {
   state = {
     testPdf: "files/quiroga.pdf",
     loading: 0,
-    pagesIndex: []
+    pagesIndex: [],
+    settings: { currentScale: 1, rotation: 0 },
+    fileProperties: { name: "", pages: 0 }
   };
+
+  constructor(props) {
+    super(props);
+    this.pdfRef = React.createRef();
+  }
 
   /**
    * Load the file in PDF.js
@@ -39,8 +50,12 @@ export default class ReactPdfJs extends React.Component {
     };
 
     loadingObject.promise.then(pdfProxy => {
+      let fileProperties = {
+        name: pdf.getFilenameFromUrl(urlToUse),
+        pages: pdfProxy.numPages
+      };
       // When the pdf is loaded, store pdfProxy object in the state
-      this.setState({ pdfProxy });
+      this.setState({ pdfProxy, fileProperties });
       // and then the pages.
       this.storePagesInState();
     });
@@ -65,23 +80,35 @@ export default class ReactPdfJs extends React.Component {
     }
 
     Promise.all(allPromises).then(result => {
+      let count = 0;
       result.forEach(res => {
+        let viewport = res.getViewport(1);
+        var sizes = {
+          width: viewport.width,
+          height: viewport.height
+        };
+
         pages[res.pageNumber] = {
+          sizes: sizes,
           obj: res,
           rendered: false,
-          display: false
+          display: count < 10 ? true : false
         };
+
+        count++;
       });
       this.setState({ pagesIndex, pages });
+      sendEvent("pagesstored");
       this.start();
     });
   }
 
   start() {
-    var newPageState = this.state.pages[54];
+    /* var newPageState = this.state.pages[54];
     newPageState.display = true;
     var newPagesState = { ...this.state.pages, 54: newPageState };
-    this.setState({ pages: newPagesState });
+    this.setState({ pages: newPagesState }); */
+    sendEvent("pdfloaded");
   }
 
   componentWillMount() {
@@ -96,11 +123,20 @@ export default class ReactPdfJs extends React.Component {
 
     // Update the PDF object in the state
     this.setState({ pdf: PDF });
+
+    document.addEventListener("pdfloaded", () => {
+      console.log("PDF Cargado!");
+    });
   }
 
   componentDidMount() {
     // When component is mounted, load the file
     this.loadFile();
+
+    let pdfContainer = this.pdfRef.current;
+    watchScroll(pdfContainer, data => {
+      console.log(data);
+    });
   }
 
   setPageVisible(number) {
@@ -113,21 +149,26 @@ export default class ReactPdfJs extends React.Component {
   }
 
   render() {
-    const { pagesIndex, pages, loading } = this.state;
+    const { pagesIndex, pages, loading, settings, fileProperties } = this.state;
     return (
       <div>
-        PDF.JS
-        <p>
-          <button onClick={() => this.setPageVisible(41)}>
-            Set 41 visible
-          </button>
-        </p>
         {loading ? <p>{loading + "%"}</p> : null}
-        {pagesIndex.map(number => {
-          return (
-            <Page number={number} loaded={pages[number].display} key={number} />
-          );
-        })}
+
+        <div className="viewer">
+          <Toolbar file={fileProperties} />
+          <div className="pdf" ref={this.pdfRef}>
+            {pagesIndex.map(number => {
+              return (
+                <Page
+                  number={number}
+                  page={pages[number]}
+                  settings={settings}
+                  key={number}
+                />
+              );
+            })}
+          </div>
+        </div>
       </div>
     );
   }

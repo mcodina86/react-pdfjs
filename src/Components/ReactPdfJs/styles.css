@@ -1,0 +1,14 @@
+.viewer {
+  overflow-y: auto;
+  overflow-y: scroll;
+  background: #ccc;
+  height: calc(80vh - 100px);
+  width: calc(80vw - 100px);
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.pdf {
+  overflow: auto;
+  height: calc(100% - 2.5em);
+}
