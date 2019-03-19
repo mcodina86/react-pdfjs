@@ -78,6 +78,7 @@ export default class Page extends React.Component {
     obj
       .render(renderContext)
       .then(() => {
+        this.setState({ rendering: false });
         console.debug(`Page ${this.props.number} rendered`);
       })
       .catch(error => {
