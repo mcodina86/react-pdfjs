@@ -9,10 +9,16 @@ import "./styles.css";
 export default class ReactPdfJs extends React.Component {
   state = {
     testPdf: "files/quiroga.pdf",
+    currentPage: 1,
     loading: 0,
     pagesIndex: [],
     settings: { currentScale: 1, rotation: 0 },
-    fileProperties: { name: "", pages: 0 }
+    fileProperties: { name: "", pages: 0 },
+    viewerSize: { width: 0, height: 0 },
+    options: {
+      pagesInMemoryBefore: 3,
+      pagesInMemoryAfter: 3
+    }
   };
 
   constructor(props) {
@@ -92,7 +98,8 @@ export default class ReactPdfJs extends React.Component {
           sizes: sizes,
           obj: res,
           rendered: false,
-          display: count < 10 ? true : false
+          position: { x: 0, y: 0 },
+          display: false
         };
 
         count++;
@@ -104,12 +111,48 @@ export default class ReactPdfJs extends React.Component {
   }
 
   start() {
-    /* var newPageState = this.state.pages[54];
-    newPageState.display = true;
-    var newPagesState = { ...this.state.pages, 54: newPageState };
-    this.setState({ pages: newPagesState }); */
+    this.setPagesToDisplay();
     sendEvent("pdfloaded");
   }
+
+  setPagesToDisplay = () => {
+    const {
+      currentPage,
+      pagesIndex,
+      pages,
+      options,
+      fileProperties
+    } = this.state;
+    pagesIndex.forEach(num => {
+      pages[num].display = false;
+    });
+
+    let pagesToLoad = {};
+    let firstPageToLoad = pages[currentPage];
+    firstPageToLoad.display = true;
+    pagesToLoad[currentPage] = firstPageToLoad;
+
+    if (options.pagesInMemoryBefore > 0) {
+      for (var i = 1; i <= options.pagesInMemoryBefore; i++) {
+        if (currentPage - i > 0) {
+          pagesToLoad[currentPage - i] = pages[currentPage - i];
+          pagesToLoad[currentPage - i].display = true;
+        }
+      }
+    }
+
+    if (options.pagesInMemoryBefore > 0) {
+      for (var j = 1; j <= options.pagesInMemoryBefore; j++) {
+        if (currentPage + j <= fileProperties.pages) {
+          pagesToLoad[currentPage + j] = pages[currentPage + j];
+          pagesToLoad[currentPage + j].display = true;
+        }
+      }
+    }
+
+    const pagesToStore = { ...pages, pagesToLoad };
+    this.setState({ pages: pagesToStore });
+  };
 
   componentWillMount() {
     // Configure the pdf.js worker. Use current version worker from CDN instead the one
@@ -125,7 +168,7 @@ export default class ReactPdfJs extends React.Component {
     this.setState({ pdf: PDF });
 
     document.addEventListener("pdfloaded", () => {
-      console.log("PDF Cargado!");
+      console.debug("PDF loaded");
     });
   }
 
@@ -134,28 +177,77 @@ export default class ReactPdfJs extends React.Component {
     this.loadFile();
 
     let pdfContainer = this.pdfRef.current;
+    this.setupViewerSize();
+
+    window.addEventListener("resize", () => {
+      this.setupViewerSize();
+    });
+
     watchScroll(pdfContainer, data => {
-      console.log(data);
+      this.setPageNumberByScroll(data);
     });
   }
 
-  setPageVisible(number) {
+  setupViewerSize = () => {
+    let pdfContainer = this.pdfRef.current;
+    let viewerSize = {
+      width: pdfContainer.clientWidth,
+      height: pdfContainer.clientHeight
+    };
+    this.setState({ viewerSize });
+  };
+
+  setPageVisible = number => {
     var newPageState = this.state.pages[number];
     newPageState.display = true;
     var tempObject = {};
     tempObject[number] = newPageState;
     var newPagesState = { ...this.state.pages, tempObject };
     this.setState({ pages: newPagesState });
-  }
+  };
+
+  setPageNumberByScroll = scrollData => {
+    const { pagesIndex, pages, currentPage } = this.state;
+    let { lastY } = scrollData;
+
+    // let middle = lastY - viewerSize.height / 2;
+    let middle = lastY;
+    if (middle < 1) return;
+
+    let positions = pagesIndex.map(num => pages[num].position.y);
+
+    let closest = positions.reduce(function(prev, curr) {
+      return Math.abs(curr - middle) < Math.abs(prev - middle) ? curr : prev;
+    });
+
+    if (currentPage !== positions.indexOf(closest) + 1) {
+      this.setState({ currentPage: positions.indexOf(closest) + 1 });
+      this.setPagesToDisplay();
+    }
+  };
+
+  attachPositions = (pageNumber, positions) => {
+    let page = this.state.pages[pageNumber];
+    page.position = positions;
+    let newPages = { ...this.state.pages, pageNumber: page };
+    this.setState({ pages: newPages });
+  };
 
   render() {
-    const { pagesIndex, pages, loading, settings, fileProperties } = this.state;
+    const {
+      pagesIndex,
+      pages,
+      loading,
+      settings,
+      fileProperties,
+      currentPage
+    } = this.state;
     return (
       <div>
         {loading ? <p>{loading + "%"}</p> : null}
 
         <div className="viewer">
-          <Toolbar file={fileProperties} />
+          <Toolbar file={fileProperties} currentPage={currentPage} />
           <div className="pdf" ref={this.pdfRef}>
             {pagesIndex.map(number => {
               return (
@@ -164,6 +256,7 @@ export default class ReactPdfJs extends React.Component {
                   page={pages[number]}
                   settings={settings}
                   key={number}
+                  onPositionsSetted={this.attachPositions}
                 />
               );
             })}

@@ -6,11 +6,13 @@ export default class Page extends React.Component {
   constructor(props) {
     super(props);
     this.canvasRef = React.createRef();
+    this.containerRef = React.createRef();
   }
 
   state = {
     rendering: false,
     display: this.props.page.display,
+    position: { x: 0, y: 0 },
     sizes: {
       width: 0,
       height: 0,
@@ -20,8 +22,15 @@ export default class Page extends React.Component {
   };
 
   componentDidMount() {
-    let { display } = this.state;
+    let { display, position } = this.state;
+    const { onPositionsSetted, number } = this.props;
     if (display) this.doRender();
+    if (this.containerRef.current) {
+      position.x = this.containerRef.current.offsetLeft;
+      position.y = this.containerRef.current.offsetTop;
+      onPositionsSetted(number, position);
+      this.setState({ position });
+    }
   }
 
   componentWillUpdate() {
@@ -69,10 +78,10 @@ export default class Page extends React.Component {
     obj
       .render(renderContext)
       .then(() => {
-        console.log("Page rendered");
+        console.debug(`Page ${this.props.number} rendered`);
       })
       .catch(error => {
-        console.log(error);
+        console.error(error);
       });
   };
 
@@ -81,7 +90,11 @@ export default class Page extends React.Component {
     const { width, cssWidth, height, cssHeight } = this.state.sizes;
     const sizes = { width: cssWidth, height: cssHeight };
     return (
-      <div className={`page page-${number}`} style={sizes}>
+      <div
+        className={`page page-${number}`}
+        style={sizes}
+        ref={this.containerRef}
+      >
         {page.display ? (
           <canvas
             className={`canvas-page-${number}`}
