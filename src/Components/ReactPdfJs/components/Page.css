@@ -1,0 +1,16 @@
+.page {
+  background: #fff;
+  margin: 2em auto;
+  -webkit-box-shadow: 2px 2px 10px 0px rgba(0, 0, 0, 0.5);
+  -moz-box-shadow: 2px 2px 10px 0px rgba(0, 0, 0, 0.5);
+  box-shadow: 2px 2px 10px 0px rgba(0, 0, 0, 0.5);
+}
+
+/* .page:first-child {
+  margin-top: 0;
+}
+
+.page:last-child {
+  margin-bottom: 0;
+}
+*/
