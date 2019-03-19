@@ -212,7 +212,15 @@ export default class ReactPdfJs extends React.Component {
 
     // let middle = lastY - viewerSize.height / 2;
     let middle = lastY;
-    if (middle < 1) return;
+
+    // Sometimes it doesn't work if you quickly scroll to top
+    if (middle <= 1) {
+      if (currentPage !== 1) {
+        this.setState({ currentPage: 1 });
+        this.setPagesToDisplay();
+      }
+      return;
+    }
 
     let positions = pagesIndex.map(num => pages[num].position.y);
 
