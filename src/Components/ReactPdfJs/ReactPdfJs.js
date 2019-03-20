@@ -86,7 +86,6 @@ export default class ReactPdfJs extends React.Component {
     }
 
     Promise.all(allPromises).then(result => {
-      let count = 0;
       result.forEach(res => {
         let viewport = res.getViewport(1);
         var sizes = {
@@ -101,8 +100,6 @@ export default class ReactPdfJs extends React.Component {
           position: { x: 0, y: 0 },
           display: false
         };
-
-        count++;
       });
       this.setState({ pagesIndex, pages });
       sendEvent("pagesstored");
