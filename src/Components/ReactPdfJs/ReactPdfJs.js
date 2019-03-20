@@ -3,7 +3,7 @@ import PDF from "pdfjs-dist";
 import Page from "./components/Page";
 import Toolbar from "./components/Toolbar";
 import { sendEvent } from "./utils/events";
-import { watchScroll } from "./utils/ui_utils";
+import { watchScroll, animateIt } from "./utils/ui_utils";
 import "./styles.css";
 
 export default class ReactPdfJs extends React.Component {
@@ -207,7 +207,8 @@ export default class ReactPdfJs extends React.Component {
   };
 
   setPageNumberByScroll = scrollData => {
-    const { pagesIndex, pages, currentPage } = this.state;
+    const { pagesIndex, pages, currentPage, isWorking } = this.state;
+    if (isWorking) return false;
     let { lastY } = scrollData;
 
     // let middle = lastY - viewerSize.height / 2;
@@ -242,14 +243,21 @@ export default class ReactPdfJs extends React.Component {
   };
 
   onGoToPage = (prev = false) => {
-    const { currentPage, fileProperties, pages } = this.state;
+    const { currentPage, fileProperties, pages, isWorking } = this.state;
+
+    if (isWorking) return;
+
+    this.setState({ isWorking: true });
+
     let newPage = prev ? currentPage - 1 : currentPage + 1;
     if (newPage > fileProperties.pages || newPage < 1) return;
 
     // get page position
     const page = pages[newPage];
     const viewer = this.pdfRef.current;
-    viewer.scrollTop = page.position.y - 100;
+    animateIt(viewer, page.position.y, 100, "easeInOutQuad", 400, () => {
+      this.setState({ isWorking: false });
+    });
   };
 
   render() {
