@@ -241,6 +241,17 @@ export default class ReactPdfJs extends React.Component {
     this.setState({ pages: newPages });
   };
 
+  onGoToPage = (prev = false) => {
+    const { currentPage, fileProperties, pages } = this.state;
+    let newPage = prev ? currentPage - 1 : currentPage + 1;
+    if (newPage > fileProperties.pages || newPage < 1) return;
+
+    // get page position
+    const page = pages[newPage];
+    const viewer = this.pdfRef.current;
+    viewer.scrollTop = page.position.y - 100;
+  };
+
   render() {
     const {
       pagesIndex,
@@ -255,7 +266,11 @@ export default class ReactPdfJs extends React.Component {
         {loading ? <p>{loading + "%"}</p> : null}
 
         <div className="viewer">
-          <Toolbar file={fileProperties} currentPage={currentPage} />
+          <Toolbar
+            file={fileProperties}
+            currentPage={currentPage}
+            goToPage={this.onGoToPage}
+          />
           <div className="pdf" ref={this.pdfRef}>
             {pagesIndex.map(number => {
               return (
