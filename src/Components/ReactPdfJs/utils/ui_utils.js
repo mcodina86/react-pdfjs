@@ -934,6 +934,107 @@ function moveToEndOfArray(arr, condition) {
   }
 }
 
+/**
+ * Easings functions for animation!
+ */
+const easings = {
+  linear(t) {
+    return t;
+  },
+  easeInQuad(t) {
+    return t * t;
+  },
+  easeOutQuad(t) {
+    return t * (2 - t);
+  },
+  easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  },
+  easeInCubic(t) {
+    return t * t * t;
+  },
+  easeOutCubic(t) {
+    return --t * t * t + 1;
+  },
+  easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+  },
+  easeInQuart(t) {
+    return t * t * t * t;
+  },
+  easeOutQuart(t) {
+    return 1 - --t * t * t * t;
+  },
+  easeInOutQuart(t) {
+    return t < 0.5 ? 8 * t * t * t * t : 1 - 8 * --t * t * t * t;
+  },
+  easeInQuint(t) {
+    return t * t * t * t * t;
+  },
+  easeOutQuint(t) {
+    return 1 + --t * t * t * t * t;
+  },
+  easeInOutQuint(t) {
+    return t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * --t * t * t * t * t;
+  }
+};
+
+/**
+ * Animate scrollTop! It's used by prev and next page buttons
+ *
+ * @param {HTMLElement} el
+ * @param {number} destination
+ * @param {number} headerSize
+ * @param {string} easings
+ * @param {number} duration
+ * @param {function} callback
+ */
+function animateIt(
+  el,
+  destination,
+  headerSize = 0,
+  easing = "linear",
+  duration = 200,
+  callback
+) {
+  if ("requestAnimationFrame" in window === false) {
+    console.debug("requestAnimationFrame doesn't exists here");
+    el.scrollTop = destination - headerSize;
+    if (callback) {
+      callback();
+    }
+    return;
+  }
+
+  const currentPosition = el.scrollTop;
+
+  const startTime =
+    "now" in window.performance ? performance.now() : new Date().getTime();
+
+  function scroll() {
+    const now =
+      "now" in window.performance ? performance.now() : new Date().getTime();
+    const time = Math.min(1, (now - startTime) / duration);
+    const timeFunction = easings[easing](time);
+    const step = Math.ceil(
+      timeFunction * (destination - currentPosition - headerSize) +
+        currentPosition
+    );
+    el.scrollTop = step;
+
+    if (currentPosition + step === currentPosition + destination - headerSize) {
+      if (callback) {
+        callback();
+      }
+      return;
+    }
+
+    requestAnimationFrame(scroll);
+  }
+
+  scroll();
+}
+
 export {
   CSS_UNITS,
   DEFAULT_SCALE_VALUE,
@@ -973,5 +1074,7 @@ export {
   // animationStarted,
   WaitOnType,
   waitOnEventOrTimeout,
-  moveToEndOfArray
+  moveToEndOfArray,
+  animateIt,
+  easings
 };

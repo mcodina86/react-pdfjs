@@ -3,7 +3,7 @@ import PDF from "pdfjs-dist";
 import Page from "./components/Page";
 import Toolbar from "./components/Toolbar";
 import { sendEvent } from "./utils/events";
-import { watchScroll } from "./utils/ui_utils";
+import { watchScroll, animateIt } from "./utils/ui_utils";
 import "./styles.css";
 
 export default class ReactPdfJs extends React.Component {
@@ -86,7 +86,6 @@ export default class ReactPdfJs extends React.Component {
     }
 
     Promise.all(allPromises).then(result => {
-      let count = 0;
       result.forEach(res => {
         let viewport = res.getViewport(1);
         var sizes = {
@@ -101,8 +100,6 @@ export default class ReactPdfJs extends React.Component {
           position: { x: 0, y: 0 },
           display: false
         };
-
-        count++;
       });
       this.setState({ pagesIndex, pages });
       sendEvent("pagesstored");
@@ -207,7 +204,8 @@ export default class ReactPdfJs extends React.Component {
   };
 
   setPageNumberByScroll = scrollData => {
-    const { pagesIndex, pages, currentPage } = this.state;
+    const { pagesIndex, pages, currentPage, isWorking } = this.state;
+    if (isWorking) return false;
     let { lastY } = scrollData;
 
     // let middle = lastY - viewerSize.height / 2;
@@ -241,6 +239,24 @@ export default class ReactPdfJs extends React.Component {
     this.setState({ pages: newPages });
   };
 
+  onGoToPage = (prev = false) => {
+    const { currentPage, fileProperties, pages, isWorking } = this.state;
+
+    if (isWorking) return;
+
+    this.setState({ isWorking: true });
+
+    let newPage = prev ? currentPage - 1 : currentPage + 1;
+    if (newPage > fileProperties.pages || newPage < 1) return;
+
+    // get page position
+    const page = pages[newPage];
+    const viewer = this.pdfRef.current;
+    animateIt(viewer, page.position.y, 100, "easeInOutQuad", 400, () => {
+      this.setState({ isWorking: false });
+    });
+  };
+
   render() {
     const {
       pagesIndex,
@@ -255,7 +271,11 @@ export default class ReactPdfJs extends React.Component {
         {loading ? <p>{loading + "%"}</p> : null}
 
         <div className="viewer">
-          <Toolbar file={fileProperties} currentPage={currentPage} />
+          <Toolbar
+            file={fileProperties}
+            currentPage={currentPage}
+            goToPage={this.onGoToPage}
+          />
           <div className="pdf" ref={this.pdfRef}>
             {pagesIndex.map(number => {
               return (
