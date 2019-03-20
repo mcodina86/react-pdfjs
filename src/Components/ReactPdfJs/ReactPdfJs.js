@@ -3,7 +3,11 @@ import PDF from "pdfjs-dist";
 import Page from "./components/Page";
 import Toolbar from "./components/Toolbar";
 import { sendEvent } from "./utils/events";
-import { watchScroll, animateIt } from "./utils/ui_utils";
+import {
+  watchScroll,
+  animateIt,
+  getPDFFileNameFromURL
+} from "./utils/ui_utils";
 import "./styles.css";
 
 export default class ReactPdfJs extends React.Component {
@@ -57,7 +61,7 @@ export default class ReactPdfJs extends React.Component {
 
     loadingObject.promise.then(pdfProxy => {
       let fileProperties = {
-        name: pdf.getFilenameFromUrl(urlToUse),
+        name: getPDFFileNameFromURL(urlToUse, "Unknown Document"),
         pages: pdfProxy.numPages
       };
       // When the pdf is loaded, store pdfProxy object in the state
