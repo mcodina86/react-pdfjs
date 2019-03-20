@@ -58,7 +58,10 @@ export default class Page extends React.Component {
 
     let canvasContext = canvas.getContext("2d");
     let outputScale = getOutputScale(canvasContext);
-    let viewport = obj.getViewport(settings.currentScale, settings.rotation);
+    let viewport = obj.getViewport(
+      settings.display.currentScale,
+      settings.display.rotation
+    );
     // Set sizes:
     var sizes = {
       width: viewport.width * outputScale.sx,

@@ -8,27 +8,51 @@ import {
   animateIt,
   getPDFFileNameFromURL
 } from "./utils/ui_utils";
+import settings from "./core/settings";
 import "./styles.css";
 
 export default class ReactPdfJs extends React.Component {
-  state = {
-    testPdf: "files/quiroga.pdf",
-    currentPage: 1,
-    loading: 0,
-    pagesIndex: [],
-    settings: { currentScale: 1, rotation: 0 },
-    fileProperties: { name: "", pages: 0 },
-    viewerSize: { width: 0, height: 0 },
-    options: {
-      pagesInMemoryBefore: 3,
-      pagesInMemoryAfter: 3
-    }
-  };
-
   constructor(props) {
     super(props);
     this.pdfRef = React.createRef();
+    const settingsToUse = this.configureSettings();
+
+    this.state = {
+      testPdf: "files/quiroga.pdf",
+      currentPage: 1,
+      loading: 0,
+      pagesIndex: [],
+      settings: settingsToUse,
+      fileProperties: { name: "", pages: 0 },
+      viewerSize: { width: 0, height: 0 },
+      options: {
+        pagesInMemoryBefore: 3,
+        pagesInMemoryAfter: 3
+      }
+    };
   }
+
+  configureSettings = () => {
+    const receivedSettings = this.props.settings;
+
+    // Use default settings when settings props is empty
+    if (!receivedSettings) return settings;
+
+    let settingsToUse = {};
+
+    // Check display settings
+    let displaySettings = settings.display;
+    if (receivedSettings.display) {
+      displaySettings = {
+        ...settings.display,
+        ...receivedSettings.display
+      };
+    }
+
+    settingsToUse = { ...settings, display: displaySettings };
+
+    return settingsToUse;
+  };
 
   /**
    * Load the file in PDF.js
@@ -73,7 +97,7 @@ export default class ReactPdfJs extends React.Component {
 
   storePagesInState() {
     // get pdfProxy from state
-    const { pdfProxy } = this.state;
+    const { pdfProxy, settings } = this.state;
 
     // Instead storing the pages in an array, we use an object
     let pages = {};
@@ -91,7 +115,7 @@ export default class ReactPdfJs extends React.Component {
 
     Promise.all(allPromises).then(result => {
       result.forEach(res => {
-        let viewport = res.getViewport(1);
+        let viewport = res.getViewport(settings.display.currentScale);
         var sizes = {
           width: viewport.width,
           height: viewport.height
