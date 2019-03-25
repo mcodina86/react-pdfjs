@@ -1,5 +1,5 @@
 import React from "react";
-import { getOutputScale } from "../utils/ui_utils";
+import { getOutputScale, buildSVG } from "../utils/ui_utils";
 import "./Page.css";
 
 export default class Page extends React.Component {
@@ -58,7 +58,10 @@ export default class Page extends React.Component {
 
     let canvasContext = canvas.getContext("2d");
     let outputScale = getOutputScale(canvasContext);
-    let viewport = obj.getViewport(settings.currentScale, settings.rotation);
+    let viewport = obj.getViewport(
+      settings.display.currentScale,
+      settings.display.rotation
+    );
     // Set sizes:
     var sizes = {
       width: viewport.width * outputScale.sx,
@@ -79,6 +82,12 @@ export default class Page extends React.Component {
       .render(renderContext)
       .then(() => {
         this.setState({ rendering: false });
+        if (settings.rendering.selectText) {
+          obj.getTextContent().then(textContent => {
+            var svg = buildSVG(viewport, textContent);
+            this.containerRef.current.appendChild(svg);
+          });
+        }
         console.debug(`Page ${this.props.number} rendered`);
       })
       .catch(error => {

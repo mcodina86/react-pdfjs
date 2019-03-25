@@ -1,4 +1,5 @@
 /* eslint-disable no-useless-escape */
+import pdfjsLib from "pdfjs-dist";
 
 /**
  * Returns scale factor for the canvas. It makes sense for the HiDPI displays.
@@ -335,4 +336,34 @@ export const animateIt = (
   }
 
   scroll();
+};
+
+export const buildSVG = (viewport, textContent) => {
+  // Building SVG with size of the viewport (for simplicity)
+  var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg:svg");
+  svg.setAttribute("width", viewport.width + "px");
+  svg.setAttribute("height", viewport.height + "px");
+  // items are transformed to have 1px font size
+  svg.setAttribute("font-size", 1);
+
+  // processing all items
+  textContent.items.forEach(function(textItem) {
+    // we have to take in account viewport transform, which includes scale,
+    // rotation and Y-axis flip, and not forgetting to flip text.
+    var tx = pdfjsLib.Util.transform(
+      pdfjsLib.Util.transform(viewport.transform, textItem.transform),
+      [1, 0, 0, -1, 0, 0]
+    );
+    var style = textContent.styles[textItem.fontName];
+    // adding text element
+    var text = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "svg:text"
+    );
+    text.setAttribute("transform", "matrix(" + tx.join(" ") + ")");
+    text.setAttribute("font-family", style.fontFamily);
+    text.textContent = textItem.str;
+    svg.appendChild(text);
+  });
+  return svg;
 };
