@@ -5,7 +5,7 @@ class App extends Component {
   render() {
     const settings = {
       display: {
-        currentScale: 2
+        currentScale: 1
       }
     };
 

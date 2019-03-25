@@ -49,7 +49,20 @@ export default class ReactPdfJs extends React.Component {
       };
     }
 
-    settingsToUse = { ...settings, display: displaySettings };
+    // Check rendering settings
+    let renderingSettings = settings.rendering;
+    if (receivedSettings.rendering) {
+      renderingSettings = {
+        ...settings.rendering,
+        ...receivedSettings.rendering
+      };
+    }
+
+    settingsToUse = {
+      ...settings,
+      display: displaySettings,
+      rendering: renderingSettings
+    };
 
     return settingsToUse;
   };
@@ -121,13 +134,15 @@ export default class ReactPdfJs extends React.Component {
           height: viewport.height
         };
 
-        pages[res.pageNumber] = {
+        let pageToSave = {
           sizes: sizes,
           obj: res,
           rendered: false,
           position: { x: 0, y: 0 },
-          display: false
+          display: false,
+          txt: null
         };
+        pages[res.pageNumber] = pageToSave;
       });
       this.setState({ pagesIndex, pages });
       sendEvent("pagesstored");
