@@ -1,5 +1,26 @@
 import React from "react";
-import { getOutputScale, buildSVG } from "../utils/ui_utils";
+
+const Page = React.forwardRef((props, ref) => {
+  let style = { width: props.width, height: props.height };
+  return (
+    <div className={`page page-${props.number}`} style={style} ref={ref}>
+      {props.children}
+    </div>
+  );
+});
+
+/* const Page = props => {
+  let style = { width: props.width, height: props.height };
+  return (
+    <div className={`page page-${props.number}`} style={style}>
+      {props.children}
+    </div>
+  );
+}; */
+
+export default Page;
+
+/* import { getOutputScale, buildSVG } from "../utils/ui_utils";
 import "./Page.css";
 
 export default class Page extends React.Component {
@@ -118,3 +139,4 @@ export default class Page extends React.Component {
     );
   }
 }
+*/

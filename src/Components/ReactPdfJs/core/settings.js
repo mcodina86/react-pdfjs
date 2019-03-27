@@ -5,10 +5,15 @@ const settings = {
     maxScale: 10,
     currentScale: 1,
     zoomStep: 0.5,
-    rotation: 0
+    rotation: 0,
+    pagesInMemoryBefore: 3,
+    pagesInMemoryAfter: 3
   },
   rendering: {
     selectText: false
+  },
+  example: {
+    url: "files/quiroga.pdf"
   }
   //
 };

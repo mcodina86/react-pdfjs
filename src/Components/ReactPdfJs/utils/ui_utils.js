@@ -1,6 +1,8 @@
 /* eslint-disable no-useless-escape */
 import pdfjsLib from "pdfjs-dist";
 
+export const pixelRatio = window.devicePixelRatio || 1;
+
 /**
  * Returns scale factor for the canvas. It makes sense for the HiDPI displays.
  * @return {Object} The object with horizontal (sx) and vertical (sy)
