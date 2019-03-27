@@ -1,4 +1,5 @@
 import React from "react";
+import "./Page.css";
 
 const Page = React.forwardRef((props, ref) => {
   let style = { width: props.width, height: props.height };

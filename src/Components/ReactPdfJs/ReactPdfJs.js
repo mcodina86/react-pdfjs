@@ -150,9 +150,10 @@ export default class ReactPdfJs extends React.Component {
   }
 
   renderVisiblePages = () => {
-    let { renderQueue, settings } = this.state;
+    let { renderQueue, settings, pages } = this.state;
 
-    renderQueue.forEach(page => {
+    renderQueue.forEach(number => {
+      let page = pages[number];
       if (page.working) return;
       const div = page.ref.current;
       const canvas = div.querySelector("canvas");
@@ -184,11 +185,7 @@ export default class ReactPdfJs extends React.Component {
       page.pageObject
         .render(renderContext)
         .then(() => {
-          let pageRendered = {};
-          page.working = false;
-          pageRendered[pageNumber] = page;
-          this.setState({ pages: { ...this.state.pages, pageRendered } });
-
+          this.renderPageDone(number);
           /* if (settings.rendering.selectText) {
           obj.getTextContent().then(textContent => {
             var svg = buildSVG(viewport, textContent);
@@ -205,6 +202,19 @@ export default class ReactPdfJs extends React.Component {
           console.error(error);
         });
     });
+  };
+
+  renderPageDone = number => {
+    let { renderQueue, pages } = this.state;
+    let newQueue = renderQueue.filter(item => item !== number);
+
+    let page = pages[number];
+    page.working = false;
+    let newPageToStore = {};
+    newPageToStore[number] = page;
+
+    let newPages = { ...pages, newPageToStore };
+    this.setState({ pages: newPages, renderQueue: newQueue });
   };
 
   setPagesToDisplay = callback => {
@@ -226,14 +236,14 @@ export default class ReactPdfJs extends React.Component {
     let firstPageToLoad = pages[currentPage];
     firstPageToLoad.display = true;
     pagesToLoad[currentPage] = firstPageToLoad;
-    queue.push(firstPageToLoad);
+    queue.push(currentPage);
 
     if (pagesInMemoryBefore > 0) {
       for (var i = 1; i <= pagesInMemoryBefore; i++) {
         if (currentPage - i > 0) {
           pagesToLoad[currentPage - i] = pages[currentPage - i];
           pagesToLoad[currentPage - i].display = true;
-          queue.push(pagesToLoad[currentPage - i]);
+          queue.push(currentPage - i);
         }
       }
     }
@@ -243,7 +253,7 @@ export default class ReactPdfJs extends React.Component {
         if (currentPage + j <= fileProperties.pages) {
           pagesToLoad[currentPage + j] = pages[currentPage + j];
           pagesToLoad[currentPage + j].display = true;
-          queue.push(pagesToLoad[currentPage + j]);
+          queue.push(currentPage + j);
         }
       }
     }
@@ -285,9 +295,9 @@ export default class ReactPdfJs extends React.Component {
       this.setupViewerSize();
     });
 
-    /* watchScroll(pdfContainer, data => {
+    watchScroll(pdfContainer, data => {
       this.setPageNumberByScroll(data);
-    }); */
+    });
   }
 
   setupViewerSize = () => {
@@ -325,7 +335,7 @@ export default class ReactPdfJs extends React.Component {
       return;
     }
 
-    let positions = pagesIndex.map(num => pages[num].position.y);
+    let positions = pagesIndex.map(num => pages[num].offsetTop);
 
     let closest = positions.reduce(function(prev, curr) {
       return Math.abs(curr - middle) < Math.abs(prev - middle) ? curr : prev;
@@ -406,20 +416,3 @@ export default class ReactPdfJs extends React.Component {
     );
   }
 }
-
-/*
-<div className="pdf" ref={this.pdfRef}>
-            {pagesIndex.map(number => {
-              return (
-                <Page
-                  number={number}
-                  page={pages[number]}
-                  settings={settings}
-                  key={number}
-                  onPositionsSetted={this.attachPositions}
-                />
-              );
-            })}
-          </div>
-
-*/
