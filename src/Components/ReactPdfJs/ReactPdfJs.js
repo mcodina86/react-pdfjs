@@ -259,6 +259,15 @@ export default class ReactPdfJs extends React.Component {
     }
 
     const pagesToStore = { ...pages, pagesToLoad };
+
+    /** setup positions */
+    pagesIndex.forEach(number => {
+      let page = pagesToStore[number];
+      let div = page.ref.current;
+      page.offsetLeft = div.offsetLeft;
+      page.offsetTop = div.offsetTop;
+      pagesToStore[number] = page;
+    });
     this.setState({ pages: pagesToStore, renderQueue: queue }, () => {
       if (callback) callback();
     });
