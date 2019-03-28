@@ -85,8 +85,13 @@ export default class ReactPdfJs extends React.Component {
       // When the pdf is loaded, store pdfProxy object in the state
       this.setState({ pdfProxy, fileProperties }, () => {
         this.storePagesInState();
-        let total = performance.now() - start;
-        console.debug(`Loading file took ${Math.round(total)}ms`);
+
+        if (settings.debug) {
+          let total = performance.now() - start;
+          console.debug(
+            `[react-pdfjs] Loading file took ${Math.round(total)}ms`
+          );
+        }
       });
     });
   }
@@ -184,9 +189,11 @@ export default class ReactPdfJs extends React.Component {
     // Update the PDF object in the state
     this.setState({ pdf: PDF });
 
-    document.addEventListener("pdfloaded", () => {
-      console.debug("PDF loaded");
-    });
+    if (this.state.settings.debug) {
+      document.addEventListener("pdfloaded", () => {
+        console.debug("[react-pdfjs] PDF loaded");
+      });
+    }
   }
 
   componentDidMount() {
@@ -308,6 +315,7 @@ export default class ReactPdfJs extends React.Component {
                     page={page.pageObject}
                     display={page.display}
                     scale={currentScale}
+                    debug={this.state.settings.debug}
                   />
                 </div>
               );

@@ -41,7 +41,6 @@ export const renderPage = (page, canvas, scale, callback, error) => {
   canvas.width = viewport.width * outputScale.sx;
   canvas.height = viewport.height * outputScale.sy;
 
-  let start = performance.now();
   page
     .render(renderContext)
     .then(() => {
@@ -52,11 +51,6 @@ export const renderPage = (page, canvas, scale, callback, error) => {
             this.containerRef.current.appendChild(svg);
           });
         } */
-      console.debug(
-        `Page ${page.pageNumber} rendered in ${Math.round(
-          performance.now() - start
-        )}ms`
-      );
       return page;
     })
     .catch(err => {

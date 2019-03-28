@@ -31,7 +31,22 @@ export default class Page extends React.Component {
   componentDidUpdate() {
     if (this.props.display === true) {
       this.setupSizes(() => {
-        renderPage(this.props.page, this.canvasRef.current, this.props.scale);
+        const start = performance.now();
+        renderPage(
+          this.props.page,
+          this.canvasRef.current,
+          this.props.scale,
+          () => {
+            if (this.props.debug) {
+              const total = performance.now() - start;
+              console.debug(
+                `[react-pdfjs] Page ${
+                  this.props.page.pageNumber
+                } rendered in ${Math.round(total)}ms`
+              );
+            }
+          }
+        );
       });
     }
   }
@@ -39,7 +54,22 @@ export default class Page extends React.Component {
   componentWillMount() {
     if (!this.props.display) return;
     this.setupSizes(() => {
-      renderPage(this.props.page, this.canvasRef.current, this.props.scale);
+      const start = performance.now();
+      renderPage(
+        this.props.page,
+        this.canvasRef.current,
+        this.props.scale,
+        () => {
+          if (this.props.debug) {
+            const total = performance.now() - start;
+            console.debug(
+              `[react-pdfjs] Page ${
+                this.props.page.pageNumber
+              } rendered in ${Math.round(total)}ms`
+            );
+          }
+        }
+      );
     });
   }
 
