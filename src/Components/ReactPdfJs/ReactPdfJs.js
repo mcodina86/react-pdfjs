@@ -27,7 +27,7 @@ export default class ReactPdfJs extends React.Component {
       pagesIndex: [],
       pages: {},
       renderQueue: [],
-      currentScale: settingsToUse.display.currentScale
+      currentScale: settingsToUse.currentScale
     };
   }
 
@@ -39,30 +39,10 @@ export default class ReactPdfJs extends React.Component {
 
     let settingsToUse = {};
 
-    // Check display settings
-    let displaySettings = settings.display;
-    if (receivedSettings.display) {
-      displaySettings = {
-        ...settings.display,
-        ...receivedSettings.display
-      };
-    }
-
-    // Check rendering settings
-    let renderingSettings = settings.rendering;
-    if (receivedSettings.rendering) {
-      renderingSettings = {
-        ...settings.rendering,
-        ...receivedSettings.rendering
-      };
-    }
-
     settingsToUse = {
       ...settings,
-      display: displaySettings,
-      rendering: renderingSettings
+      ...receivedSettings
     };
-
     return settingsToUse;
   };
 
@@ -74,7 +54,7 @@ export default class ReactPdfJs extends React.Component {
     const { url } = this.props;
 
     // If url prop exists, use that, instead, use test PDF
-    let urlToUse = url ? url : settings.example.url;
+    let urlToUse = url ? url : settings.exampleUrl;
 
     let loadingObject = pdf.getDocument({
       url: urlToUse
@@ -82,6 +62,8 @@ export default class ReactPdfJs extends React.Component {
 
     // Update loading percentage using onProgress information from PDF.js
     let loading = 0;
+
+    let start = performance.now();
     loadingObject.onProgress = progressData => {
       // Simple 3 rule
       // X === 100%
@@ -103,6 +85,8 @@ export default class ReactPdfJs extends React.Component {
       // When the pdf is loaded, store pdfProxy object in the state
       this.setState({ pdfProxy, fileProperties }, () => {
         this.storePagesInState();
+        let total = performance.now() - start;
+        console.debug(`Loading file took ${Math.round(total)}ms`);
       });
     });
   }
@@ -127,7 +111,7 @@ export default class ReactPdfJs extends React.Component {
 
     Promise.all(allPromises).then(result => {
       result.forEach(res => {
-        let viewport = res.getViewport(settings.display.currentScale);
+        let viewport = res.getViewport(settings.currentScale);
 
         let pageToSave = {
           offsetTop: 0,
@@ -155,7 +139,7 @@ export default class ReactPdfJs extends React.Component {
       fileProperties
     } = this.state;
 
-    const { pagesInMemoryBefore, pagesInMemoryAfter } = settings.display;
+    const { pagesInMemoryBefore, pagesInMemoryAfter } = settings;
     let queue = [currentPage];
 
     for (var i = 1; i <= parseInt(pagesInMemoryBefore); i++) {
@@ -319,7 +303,6 @@ export default class ReactPdfJs extends React.Component {
                   style={{ width: page.width, height: page.height }}
                 >
                   <Page
-                    number={number}
                     width={page.width}
                     height={page.height}
                     page={page.pageObject}
