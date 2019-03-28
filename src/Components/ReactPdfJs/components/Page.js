@@ -1,143 +1,68 @@
 import React from "react";
-import "./Page.css";
-
-const Page = React.forwardRef((props, ref) => {
-  let style = { width: props.width, height: props.height };
-  return (
-    <div className={`page page-${props.number}`} style={style} ref={ref}>
-      {props.children}
-    </div>
-  );
-});
-
-/* const Page = props => {
-  let style = { width: props.width, height: props.height };
-  return (
-    <div className={`page page-${props.number}`} style={style}>
-      {props.children}
-    </div>
-  );
-}; */
-
-export default Page;
-
-/* import { getOutputScale, buildSVG } from "../utils/ui_utils";
+import { getViewport, renderPage } from "../core/pdfjs-functions";
+import { getOutputScale } from "../utils/ui_utils";
 import "./Page.css";
 
 export default class Page extends React.Component {
   constructor(props) {
     super(props);
     this.canvasRef = React.createRef();
-    this.containerRef = React.createRef();
-  }
-
-  state = {
-    rendering: false,
-    display: this.props.page.display,
-    position: { x: 0, y: 0 },
-    sizes: {
-      width: 0,
-      height: 0,
-      cssWidth: this.props.page.sizes.width,
-      cssHeight: this.props.page.sizes.height
-    }
-  };
-
-  componentDidMount() {
-    let { display, position } = this.state;
-    const { onPositionsSetted, number } = this.props;
-    if (display) this.doRender();
-    if (this.containerRef.current) {
-      position.x = this.containerRef.current.offsetLeft;
-      position.y = this.containerRef.current.offsetTop;
-      onPositionsSetted(number, position);
-      this.setState({ position });
-    }
-  }
-
-  componentWillUpdate() {
-    let { page } = this.props;
-    let { display } = this.state;
-    if (page.display !== display) {
-      this.setState({ display: page.display });
-      if (page.display) {
-        this.doRender();
-      }
-    }
-  }
-
-  doRender = () => {
-    const canvas = this.canvasRef.current;
-    if (!canvas) return;
-
-    let { rendering } = this.state;
-    const { settings, page } = this.props;
-    const obj = page.obj;
-
-    // Checking page isn't rendering before start doing it
-    if (rendering) return;
-    this.setState({ rendering: true });
-
-    let canvasContext = canvas.getContext("2d");
-    let outputScale = getOutputScale(canvasContext);
-    let viewport = obj.getViewport(
-      settings.display.currentScale,
-      settings.display.rotation
-    );
-    // Set sizes:
-    var sizes = {
-      width: viewport.width * outputScale.sx,
-      height: viewport.height * outputScale.sy,
-      cssWidth: viewport.width,
-      cssHeight: viewport.height
+    this.state = {
+      firstRendering: true,
+      width: this.props.width,
+      height: this.props.height,
+      cssWidth: this.props.width,
+      cssHeight: this.props.height
     };
-    this.setState({ sizes });
+  }
 
-    let transform = !outputScale.scaled
-      ? null
-      : [outputScale.sx, 0, 0, outputScale.sy, 0, 0];
+  shouldComponentUpdate(nextProps) {
+    if (nextProps.display !== this.props.display) {
+      return true;
+    }
 
-    let renderContext = { canvasContext, viewport, transform };
+    if (nextProps.display && nextProps.scale !== this.props.scale) {
+      return true;
+    }
 
-    // Start rendering
-    obj
-      .render(renderContext)
-      .then(() => {
-        this.setState({ rendering: false });
-        if (settings.rendering.selectText) {
-          obj.getTextContent().then(textContent => {
-            var svg = buildSVG(viewport, textContent);
-            this.containerRef.current.appendChild(svg);
-          });
-        }
-        console.debug(`Page ${this.props.number} rendered`);
-      })
-      .catch(error => {
-        console.error(error);
+    return false;
+  }
+
+  componentDidUpdate() {
+    if (this.props.display === true) {
+      this.setupSizes(() => {
+        renderPage(this.props.page, this.canvasRef.current, this.props.scale);
       });
+    }
+  }
+
+  componentWillMount() {
+    if (!this.props.display) return;
+    this.setupSizes(() => {
+      renderPage(this.props.page, this.canvasRef.current, this.props.scale);
+    });
+  }
+
+  setupSizes = callback => {
+    const { page, scale } = this.props;
+    const canvas = this.canvasRef.current;
+    const viewport = getViewport(page, scale, 0);
+    const outputScale = getOutputScale(canvas.getContext("2d"));
+    this.setState(
+      {
+        cssWidth: viewport.width,
+        cssHeight: viewport.height,
+        width: viewport.width * outputScale.sx,
+        height: viewport.height * outputScale.sy
+      },
+      () => {
+        if (typeof callback === "function") callback();
+      }
+    );
   };
 
   render() {
-    const { page, number } = this.props;
-    const { width, cssWidth, height, cssHeight } = this.state.sizes;
-    const sizes = { width: cssWidth, height: cssHeight };
-    return (
-      <div
-        className={`page page-${number}`}
-        style={sizes}
-        ref={this.containerRef}
-      >
-        {page.display ? (
-          <canvas
-            className={`canvas-page-${number}`}
-            ref={this.canvasRef}
-            width={width}
-            height={height}
-            style={sizes}
-          />
-        ) : null}
-      </div>
-    );
+    const { display } = this.props;
+    return <div>{display ? <canvas ref={this.canvasRef} /> : null}</div>;
   }
 }
-*/

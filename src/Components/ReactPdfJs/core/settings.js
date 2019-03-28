@@ -6,8 +6,8 @@ const settings = {
     currentScale: 1,
     zoomStep: 0.5,
     rotation: 0,
-    pagesInMemoryBefore: 3,
-    pagesInMemoryAfter: 3
+    pagesInMemoryBefore: 1,
+    pagesInMemoryAfter: 1
   },
   rendering: {
     selectText: false
