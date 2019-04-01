@@ -1,6 +1,6 @@
 import React from "react";
 import { getViewport, renderPage } from "../core/pdfjs-functions";
-import { getOutputScale } from "../utils/ui_utils";
+import { getOutputScale, buildCanvas } from "../utils/ui_utils";
 import "./Page.css";
 
 export default class Page extends React.Component {
@@ -42,11 +42,18 @@ export default class Page extends React.Component {
       let isZooming = this.state.scale !== this.props.scale;
       this.setState({ working: true });
       // Is doing zoo
-      this.setupSizes(isZooming, () => {
+      this.setupSizes(() => {
         const start = performance.now();
         this.setState({ working: true });
         if (isZooming) {
-          this.createTempCanvas();
+          const { width, height, cssWidth, cssHeight } = this.state;
+          buildCanvas(
+            "tempCanvas",
+            { width, height, cssWidth, cssHeight },
+            this.containerRef.current,
+            this.canvasRef.current
+          );
+          // this.createTempCanvas();
         }
         renderPage(
           this.props.page,
@@ -54,7 +61,11 @@ export default class Page extends React.Component {
           this.props.scale,
           () => {
             this.setState({ working: false });
-            this.removeTempCanvas();
+
+            window.setTimeout(() => {
+              this.removeTempCanvas();
+            }, 100);
+
             if (this.props.debug) {
               const total = performance.now() - start;
               console.debug(
@@ -90,7 +101,7 @@ export default class Page extends React.Component {
 
   componentWillMount() {
     if (!this.props.display) return;
-    this.setupSizes(false, () => {
+    this.setupSizes(() => {
       const start = performance.now();
       renderPage(
         this.props.page,
@@ -110,7 +121,7 @@ export default class Page extends React.Component {
     });
   }
 
-  setupSizes = (isZooming, callback) => {
+  setupSizes = callback => {
     console.log("Setup sizes");
     const { page, scale } = this.props;
     const canvas = this.canvasRef.current;
@@ -124,15 +135,6 @@ export default class Page extends React.Component {
         height: viewport.height * outputScale.sy
       },
       () => {
-        if (isZooming) {
-          /* const tempCanvas = this.tempCanvasRef.current;
-          const newCanvasContext = tempCanvas.getContext("2d");
-          newCanvasContext.drawImage(this.canvasRef.current, 0, 0);
-          tempCanvas.style.width = this.state.cssWidth + "px";
-          tempCanvas.style.height = this.state.cssHeight + "px";
-          tempCanvas.width = this.state.width;
-          tempCanvas.height = this.state.height; */
-        }
         if (typeof callback === "function") callback();
       }
     );

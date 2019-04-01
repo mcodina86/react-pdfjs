@@ -369,3 +369,34 @@ export const buildSVG = (viewport, textContent) => {
   });
   return svg;
 };
+
+/**
+ * Creates and return a new canvas
+ *
+ * @param {string} className
+ * @param {object} sizes {width, height, cssWidth, cssHeight}
+ * @param {HTMLElement} parent
+ * @param {HTMLCanvasElement} source
+ */
+export const buildCanvas = (className, sizes, parent, source) => {
+  let newCanvas = document.createElement("canvas");
+
+  if (sizes) {
+    newCanvas.width = sizes.width || 0;
+    newCanvas.height = sizes.height || 0;
+    newCanvas.style.width = sizes.cssWidth || sizes.width || 0;
+    newCanvas.style.height = sizes.cssHeight || sizes.height || 0;
+    newCanvas.className = className || "";
+  }
+
+  if (source) {
+    let newCanvasContext = newCanvas.getContext("2d");
+    newCanvasContext.drawImage(source, 0, 0, newCanvas.width, newCanvas.height);
+  }
+
+  if (parent) {
+    parent.appendChild(newCanvas);
+  }
+
+  return newCanvas;
+};
