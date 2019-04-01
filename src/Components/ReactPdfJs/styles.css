@@ -2,8 +2,8 @@
   overflow-y: auto;
   overflow-y: scroll;
   background: #ccc;
-  height: calc(80vh - 100px);
-  width: calc(80vw - 100px);
+  height: calc(100vh - 100px);
+  width: 100vw;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.2);
 }

@@ -279,6 +279,18 @@ export default class ReactPdfJs extends React.Component {
     });
   };
 
+  onDoZoom = (prev = false) => {
+    console.log("Doing zoom");
+    const { currentScale, settings } = this.state;
+    const { maxScale, minScale, zoomStep } = settings;
+
+    let newScale = prev ? currentScale - zoomStep : currentScale + zoomStep;
+    if (newScale > maxScale || newScale < minScale) return;
+    this.setState({ currentScale: newScale }, () => {
+      console.log(this.state.currentScale);
+    });
+  };
+
   render() {
     const {
       pagesIndex,
@@ -298,17 +310,13 @@ export default class ReactPdfJs extends React.Component {
             page={currentPage}
             total={fileProperties.pages}
             goToPage={this.onGoToPage}
+            doZoom={this.onDoZoom}
           />
           <Document ref={this.pdfRef}>
             {pagesIndex.map(number => {
               const page = pages[number];
               return (
-                <div
-                  key={number}
-                  className={`page page-${number}`}
-                  ref={page.ref}
-                  style={{ width: page.width, height: page.height }}
-                >
+                <div key={number} ref={page.ref}>
                   <Page
                     width={page.width}
                     height={page.height}

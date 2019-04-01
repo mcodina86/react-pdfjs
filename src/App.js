@@ -4,7 +4,7 @@ import ReactPdfJs from "./Components/ReactPdfJs";
 class App extends Component {
   render() {
     const settings = {
-      currentScale: 2,
+      currentScale: 1,
       debug: true
     };
 
