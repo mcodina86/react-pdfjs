@@ -9,9 +9,9 @@ export const getViewport = (page, scale, rotation) => {
 /**
  * Render the page in the gived canvas.
  *
- * @param {Object} page pdf.js page object
+ * @param {{}} page pdf.js page object
  * @param {HTMLCanvasElement} canvas
- * @param {Object} settings
+ * @param {number} scale
  * @param {Function} callback
  * @param {Function} error
  */

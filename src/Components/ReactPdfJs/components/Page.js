@@ -25,7 +25,7 @@ export default class Page extends React.Component {
       return true;
     }
 
-    if (nextProps.display && nextProps.scale !== this.props.scale) {
+    if (nextProps.scale !== this.props.scale) {
       return true;
     }
 
@@ -37,35 +37,50 @@ export default class Page extends React.Component {
   }
 
   componentDidUpdate() {
+    // Check if zoom is applied.
+    let isZooming = this.state.scale !== this.props.scale;
+    // First we check that the page should be rendered
     if (this.props.display === true) {
+      // Check that the page isn't being rendered
       if (this.state.working) return;
-      let isZooming = this.state.scale !== this.props.scale;
+      // Set the working state to true
       this.setState({ working: true });
-      // Is doing zoo
+
+      // First, setup elements sizes
       this.setupSizes(() => {
+        // For calculate the time that took each page render
         const start = performance.now();
-        this.setState({ working: true });
+
+        // If is zooming, create temporary canvas
+        let tempCanvas;
         if (isZooming) {
           const { width, height, cssWidth, cssHeight } = this.state;
-          buildCanvas(
+          tempCanvas = buildCanvas(
             "tempCanvas",
             { width, height, cssWidth, cssHeight },
             this.containerRef.current,
             this.canvasRef.current
           );
-          // this.createTempCanvas();
         }
+
+        // Start rendering the page
         renderPage(
           this.props.page,
           this.canvasRef.current,
           this.props.scale,
           () => {
+            // callback function that is executed after rendering is done
+            // Set working state to false.
             this.setState({ working: false });
 
+            // if tempCanvas exists, remove it after 100ms.
             window.setTimeout(() => {
-              this.removeTempCanvas();
+              if (tempCanvas) {
+                tempCanvas.parentNode.removeChild(tempCanvas);
+              }
             }, 100);
 
+            // If debug, print in console.debug
             if (this.props.debug) {
               const total = performance.now() - start;
               console.debug(
@@ -77,30 +92,15 @@ export default class Page extends React.Component {
           }
         );
       });
+    } else {
+      if (isZooming) this.setupSizes();
     }
   }
 
-  createTempCanvas = () => {
-    let newCanvas = document.createElement("canvas");
-    let newCanvasContext = newCanvas.getContext("2d");
-    newCanvas.width = this.state.width;
-    newCanvas.height = this.state.height;
-    newCanvas.style.width = this.state.cssWidth;
-    newCanvas.style.height = this.state.height;
-    newCanvas.className = "tempCanvas";
-    newCanvasContext.drawImage(this.canvasRef.current, 0, 0);
-    let page = this.containerRef.current;
-    page.appendChild(newCanvas);
-  };
-
-  removeTempCanvas = () => {
-    let page = this.containerRef.current;
-    let tempCanvas = page.getElementsByClassName("tempCanvas")[0];
-    if (tempCanvas) page.removeChild(tempCanvas);
-  };
-
   componentWillMount() {
     if (!this.props.display) return;
+    this.setState({ working: true });
+
     this.setupSizes(() => {
       const start = performance.now();
       renderPage(
@@ -122,22 +122,32 @@ export default class Page extends React.Component {
   }
 
   setupSizes = callback => {
-    console.log("Setup sizes");
     const { page, scale } = this.props;
     const canvas = this.canvasRef.current;
     const viewport = getViewport(page, scale, 0);
-    const outputScale = getOutputScale(canvas.getContext("2d"));
-    this.setState(
-      {
-        cssWidth: viewport.width,
-        cssHeight: viewport.height,
-        width: viewport.width * outputScale.sx,
-        height: viewport.height * outputScale.sy
-      },
-      () => {
-        if (typeof callback === "function") callback();
-      }
-    );
+    let outputScale;
+    if (canvas) {
+      outputScale = getOutputScale(canvas.getContext("2d"));
+    } else {
+      outputScale = getOutputScale();
+    }
+
+    const sizes = {
+      cssWidth: viewport.width,
+      cssHeight: viewport.height,
+      width: viewport.width * outputScale.sx,
+      height: viewport.height * outputScale.sy
+    };
+
+    if (this.state.width === sizes.width) {
+      if (typeof callback === "function") callback();
+      return;
+    }
+
+    this.setState({ ...sizes }, () => {
+      this.props.sizeChange(this.props.page.pageNumber);
+      if (typeof callback === "function") callback();
+    });
   };
 
   render() {

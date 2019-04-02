@@ -26,6 +26,7 @@ export default class ReactPdfJs extends React.Component {
       fileProperties: { name: "", pages: 0 },
       pagesIndex: [],
       pages: {},
+      cachedPositions: {},
       renderQueue: [],
       currentScale: settingsToUse.currentScale
     };
@@ -130,19 +131,27 @@ export default class ReactPdfJs extends React.Component {
         pages[res.pageNumber] = pageToSave;
       });
       this.setState({ pagesIndex, pages }, () => {
+        this.updateCachedPositions();
         this.setPagesToDisplay();
       });
     });
   }
 
+  updateCachedPositions = () => {
+    let cachedPositions = {};
+
+    this.state.pagesIndex.map(number => {
+      cachedPositions[number] = {
+        offsetTop: this.state.pages[number].ref.current.offsetTop,
+        offsetLeft: this.state.pages[number].ref.current.offsetLeft
+      };
+    });
+
+    this.setState({ cachedPositions });
+  };
+
   setPagesToDisplay = callback => {
-    const {
-      currentPage,
-      pagesIndex,
-      pages,
-      settings,
-      fileProperties
-    } = this.state;
+    const { currentPage, pages, settings, fileProperties } = this.state;
 
     const { pagesInMemoryBefore, pagesInMemoryAfter } = settings;
     let queue = [currentPage];
@@ -159,15 +168,10 @@ export default class ReactPdfJs extends React.Component {
       }
     }
 
-    let updatedPages = {};
-    /** setup positions and display */
-    pagesIndex.forEach(number => {
-      let page = pages[number];
-      let div = page.ref.current;
-      page.offsetLeft = div.offsetLeft;
-      page.offsetTop = div.offsetTop;
-      page.display = queue.indexOf(number) > -1;
-      updatedPages[number] = page;
+    let updatedPages = pages;
+
+    queue.forEach(number => {
+      updatedPages[number].display = true;
     });
 
     this.setState({ pages: updatedPages }, () => {
@@ -233,7 +237,7 @@ export default class ReactPdfJs extends React.Component {
   setPageNumberByScroll = scrollData => {
     if (this.state.forcedScrolling) return false;
 
-    const { pagesIndex, pages, currentPage, viewerSize } = this.state;
+    const { pagesIndex, currentPage, cachedPositions, viewerSize } = this.state;
 
     let { lastY } = scrollData;
 
@@ -249,7 +253,7 @@ export default class ReactPdfJs extends React.Component {
       return;
     }
 
-    let positions = pagesIndex.map(num => pages[num].offsetTop);
+    let positions = pagesIndex.map(num => cachedPositions[num].offsetTop);
 
     let closest = positions.reduce(function(prev, curr) {
       return Math.abs(curr - middle) < Math.abs(prev - middle) ? curr : prev;
@@ -274,21 +278,37 @@ export default class ReactPdfJs extends React.Component {
     // get page position
     const page = pages[newPage];
     const viewer = this.pdfRef.current;
-    animateIt(viewer, page.offsetTop, 100, "easeInOutQuad", 200, () => {
+    const offsetTop = page.ref.current.offsetTop;
+    animateIt(viewer, offsetTop, 100, "easeInOutQuad", 200, () => {
       this.setState({ forcedScrolling: false });
     });
   };
 
   onDoZoom = (prev = false) => {
-    console.log("Doing zoom");
-    const { currentScale, settings } = this.state;
+    const { currentScale, settings, pagesIndex } = this.state;
     const { maxScale, minScale, zoomStep } = settings;
 
     let newScale = prev ? currentScale - zoomStep : currentScale + zoomStep;
     if (newScale > maxScale || newScale < minScale) return;
-    this.setState({ currentScale: newScale }, () => {
-      console.log(this.state.currentScale);
+
+    let processingSizes = {};
+    pagesIndex.forEach(number => {
+      processingSizes[number] = true;
     });
+    this.setState({ currentScale: newScale, processingSizes });
+  };
+
+  onSizeChange = number => {
+    let { cachedPositions, pages } = this.state;
+
+    let newCachedPositions = cachedPositions;
+
+    newCachedPositions[number] = {
+      offsetTop: pages[number].ref.current.offsetTop,
+      offsetLeft: pages[number].ref.current.offsetLeft
+    };
+
+    this.setState({ cachedPositions: newCachedPositions });
   };
 
   render() {
@@ -323,6 +343,7 @@ export default class ReactPdfJs extends React.Component {
                     page={page.pageObject}
                     display={page.display}
                     scale={currentScale}
+                    sizeChange={this.onSizeChange}
                     debug={this.state.settings.debug}
                   />
                 </div>

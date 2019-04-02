@@ -5,7 +5,7 @@ const settings = {
   currentScale: 1,
   rotation: 0,
   pagesInMemoryBefore: 1,
-  pagesInMemoryAfter: 1,
+  pagesInMemoryAfter: 2,
   allowTextRendering: false,
   debug: false,
   exampleUrl: "files/quiroga.pdf"
