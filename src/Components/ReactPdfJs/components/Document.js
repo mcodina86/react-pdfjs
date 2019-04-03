@@ -1,8 +1,12 @@
 import React from "react";
 import Page from "./Page";
-/* import Progressbar from "./components/Progressbar";
-import Toolbar from "./components/Toolbar"; */
-import { watchScroll, getPDFFileNameFromURL } from "../utils/ui_utils";
+/* import Progressbar from "./components/Progressbar"; */
+import Toolbar from "./Toolbar";
+import {
+  watchScroll,
+  getPDFFileNameFromURL,
+  animateIt
+} from "../utils/ui_utils";
 import pdfJsLib from "pdfjs-dist";
 export default class Document extends React.Component {
   constructor(props) {
@@ -149,7 +153,7 @@ export default class Document extends React.Component {
   };
 
   setPagesToDisplay = callback => {
-    const { currentPage, pages, totalPages } = this.state;
+    const { currentPage, pages, totalPages, pagesIndex } = this.state;
     const { pagesInMemoryBefore, pagesInMemoryAfter } = this.props.settings;
 
     let queue = [currentPage];
@@ -168,8 +172,8 @@ export default class Document extends React.Component {
 
     let updatedPages = pages;
 
-    queue.forEach(number => {
-      updatedPages[number].display = true;
+    pagesIndex.forEach(num => {
+      updatedPages[num].display = queue.indexOf(num) > -1;
     });
 
     this.setState({ pages: updatedPages }, () => {
@@ -177,10 +181,112 @@ export default class Document extends React.Component {
     });
   };
 
+  setPageNumberByScroll = scrollData => {
+    if (this.state.forcedScrolling) return false;
+
+    if (!this.state.cachedPositions) {
+      this.storeInCachePositions(() => this.setPageNumberByScroll(scrollData));
+      return;
+    }
+
+    const {
+      pagesIndex,
+      currentPage,
+      cachedPositions,
+      viewerHeight
+    } = this.state;
+
+    let { lastY } = scrollData;
+
+    let middle = lastY - viewerHeight / 2;
+
+    // Sometimes it doesn't work if you quickly scroll to top
+    if (middle <= 1) {
+      if (currentPage !== 1) {
+        this.setState({ currentPage: 1 });
+        this.setPagesToDisplay();
+      }
+      return;
+    }
+
+    let positions = pagesIndex.map(num => cachedPositions[num].offsetTop);
+
+    let closest = positions.reduce(function(prev, curr) {
+      return Math.abs(curr - middle) < Math.abs(prev - middle) ? curr : prev;
+    });
+
+    if (currentPage !== positions.indexOf(closest) + 1) {
+      this.setState({ currentPage: positions.indexOf(closest) + 1 }, () => {
+        this.setPagesToDisplay();
+      });
+    }
+  };
+
+  storeInCachePositions = callback => {
+    const start = performance.now();
+
+    const { pagesIndex, pages } = this.state;
+    let cachedPositions = {};
+
+    pagesIndex.forEach(number => {
+      let page = pages[number];
+      cachedPositions[number] = {
+        offsetTop: page.ref.current.offsetTop,
+        offsetLeft: page.ref.current.offsetleft
+      };
+    });
+
+    this.setState({ cachedPositions }, () => {
+      if (this.props.settings.debug) {
+        const total = Math.round(performance.now() - start);
+        console.debug(`[react-pdfjs] get positions took ${total}ms`);
+      }
+      if (callback) callback();
+    });
+  };
+
+  onGoToPage = prev => {
+    const { currentPage, totalPages, cachedPositions } = this.state;
+    let newPage = prev ? currentPage - 1 : currentPage + 1;
+    if (newPage === 0 || newPage > totalPages) return;
+
+    if (!cachedPositions) {
+      this.storeInCachePositions(() => this.onGoToPage(prev));
+      return;
+    }
+
+    this.setState({ forcedScrolling: true });
+
+    const viewer = this.pdfRef.current;
+    const offsetTop = cachedPositions[newPage].offsetTop;
+    animateIt(viewer, offsetTop, 100, "easeInOutQuad", 200, () => {
+      this.setState({ forcedScrolling: false });
+    });
+  };
+
+  onDoZoom = minus => {
+    console.log(minus);
+  };
+
   render() {
-    const { pages, pagesIndex, currentScale } = this.state;
+    const {
+      pages,
+      pagesIndex,
+      currentScale,
+      fileName,
+      currentPage,
+      totalPages
+    } = this.state;
+
     return (
       <div className="viewer" ref={this.viewerRef}>
+        <Toolbar
+          name={fileName}
+          page={currentPage}
+          total={totalPages}
+          goToPage={this.onGoToPage}
+          doZoom={this.onDoZoom}
+        />
         <div className="pdf" ref={this.pdfRef}>
           {pagesIndex.map(num => {
             let page = pages[num];

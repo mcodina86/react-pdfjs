@@ -1,5 +1,5 @@
 import React from "react";
-import { getViewport, renderPage } from "../core/pdfjs-functions";
+import { renderPage } from "../core/pdfjs-functions";
 import { getOutputScale, buildCanvas } from "../utils/ui_utils";
 import "./Page.css";
 
@@ -19,7 +19,12 @@ export default class Page extends React.Component {
 
   shouldComponentUpdate(nextProps) {
     if (nextProps !== this.props) {
-      return true;
+      if (nextProps.display !== this.props.display) {
+        return true;
+      }
+      if (nextProps.scale !== this.props.scale) {
+        return true;
+      }
     }
 
     return false;
@@ -94,7 +99,7 @@ export default class Page extends React.Component {
 
     const { obj, scale } = this.props;
     const canvas = this.canvasRef.current;
-    const viewport = getViewport(obj, scale, 0);
+    const viewport = obj.getViewport(scale, 0);
     let outputScale;
     if (canvas) {
       outputScale = getOutputScale(canvas.getContext("2d"));
