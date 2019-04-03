@@ -22,9 +22,12 @@ export default class Page extends React.Component {
       }
     } else {
       if (this.props.scale !== prevProps.scale) {
+        let tempCanvas;
+        if (this.props.display) {
+          tempCanvas = this.createTempCanvas();
+        }
         this.setupSizes(() => {
           if (this.props.display) {
-            let tempCanvas = this.createTempCanvas();
             this.doRender(() => {
               window.setTimeout(() => {
                 if (tempCanvas) {
@@ -68,9 +71,8 @@ export default class Page extends React.Component {
   };
 
   createTempCanvas = () => {
-    let tempCanvas;
     const { width, height, cssWidth, cssHeight } = this.state;
-    tempCanvas = buildCanvas(
+    let tempCanvas = buildCanvas(
       "tempCanvas",
       { width, height, cssWidth, cssHeight },
       this.containerRef.current,

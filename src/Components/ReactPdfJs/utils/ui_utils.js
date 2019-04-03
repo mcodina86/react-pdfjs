@@ -399,6 +399,7 @@ export const buildCanvas = (className, sizes, parent, source) => {
   }
 
   if (source) {
+    // console.log(source);
     let newCanvasContext = newCanvas.getContext("2d");
     newCanvasContext.drawImage(source, 0, 0, newCanvas.width, newCanvas.height);
   }
