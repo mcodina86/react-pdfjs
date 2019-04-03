@@ -265,7 +265,16 @@ export default class Document extends React.Component {
   };
 
   onDoZoom = minus => {
-    console.log(minus);
+    const { minScale, maxScale, zoomStep } = this.props.settings;
+    const { currentScale } = this.state;
+    let newScale = minus ? currentScale - zoomStep : currentScale + zoomStep;
+    if (newScale > maxScale || newScale < minScale) return;
+
+    this.setState({ currentScale: newScale }, () => {
+      window.setTimeout(() => {
+        this.storeInCachePositions();
+      }, 100);
+    });
   };
 
   render() {

@@ -10,55 +10,31 @@ export default class Page extends React.Component {
     this.containerRef = React.createRef();
 
     this.state = {
-      width: this.props.width,
-      height: this.props.height,
       scale: this.props.scale,
       isRendering: false
     };
   }
 
-  shouldComponentUpdate(nextProps) {
-    if (nextProps !== this.props) {
-      if (nextProps.display !== this.props.display) {
-        return true;
+  componentDidUpdate(prevProps, prevState) {
+    if (prevProps.display !== this.props.display) {
+      if (this.props.display) {
+        this.doRender();
       }
-      if (nextProps.scale !== this.props.scale) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  componentDidUpdate() {
-    // Check if zoom is applied.
-    let isZooming = this.state.scale !== this.props.scale;
-    // First we check that the page should be rendered
-    if (this.props.display === true) {
-      // First, setup elements sizes
-      this.setupSizes(() => {
-        // If is zooming, create temporary canvas
-        let tempCanvas;
-        if (isZooming) {
-          const { width, height, cssWidth, cssHeight } = this.state;
-          tempCanvas = buildCanvas(
-            "tempCanvas",
-            { width, height, cssWidth, cssHeight },
-            this.containerRef.current,
-            this.canvasRef.current
-          );
-        }
-
-        this.doRender(() => {
-          window.setTimeout(() => {
-            if (tempCanvas) {
-              tempCanvas.parentNode.removeChild(tempCanvas);
-            }
-          }, 100);
-        });
-      });
     } else {
-      if (isZooming) this.setupSizes();
+      if (this.props.scale !== prevProps.scale) {
+        this.setupSizes(() => {
+          if (this.props.display) {
+            let tempCanvas = this.createTempCanvas();
+            this.doRender(() => {
+              window.setTimeout(() => {
+                if (tempCanvas) {
+                  tempCanvas.parentNode.removeChild(tempCanvas);
+                }
+              }, 100);
+            });
+          }
+        });
+      }
     }
   }
 
@@ -89,6 +65,19 @@ export default class Page extends React.Component {
       }
       if (callback) callback();
     });
+  };
+
+  createTempCanvas = () => {
+    let tempCanvas;
+    const { width, height, cssWidth, cssHeight } = this.state;
+    tempCanvas = buildCanvas(
+      "tempCanvas",
+      { width, height, cssWidth, cssHeight },
+      this.containerRef.current,
+      this.canvasRef.current
+    );
+
+    return tempCanvas;
   };
 
   setupSizes = callback => {
