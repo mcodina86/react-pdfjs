@@ -4,6 +4,7 @@ const settings = {
   zoomStep: 0.2,
   currentScale: 1,
   rotation: 0,
+  startPage: 1,
   pagesInMemoryBefore: 1,
   pagesInMemoryAfter: 2,
   allowTextRendering: false,
@@ -11,4 +12,20 @@ const settings = {
   exampleUrl: "files/quiroga.pdf"
 };
 
-export default settings;
+/**
+ * @param {Object} receivedSettings
+ */
+const getSettings = receivedSettings => {
+  if (!receivedSettings) return settings;
+
+  let settingsToUse = {};
+
+  settingsToUse = {
+    ...settings,
+    ...receivedSettings
+  };
+
+  return settingsToUse;
+};
+
+export default getSettings;

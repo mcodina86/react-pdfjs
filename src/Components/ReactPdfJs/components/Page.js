@@ -10,26 +10,15 @@ export default class Page extends React.Component {
     this.containerRef = React.createRef();
 
     this.state = {
-      firstRendering: true,
-      scale: this.props.scale,
       width: this.props.width,
       height: this.props.height,
-      cssWidth: this.props.width,
-      cssHeight: this.props.height,
-      working: false
+      scale: this.props.scale,
+      isRendering: false
     };
   }
 
-  shouldComponentUpdate(nextProps, nextState) {
-    if (nextProps.display !== this.props.display) {
-      return true;
-    }
-
-    if (nextProps.scale !== this.props.scale) {
-      return true;
-    }
-
-    if (nextState.width !== this.state.width) {
+  shouldComponentUpdate(nextProps) {
+    if (nextProps !== this.props) {
       return true;
     }
 
@@ -41,16 +30,8 @@ export default class Page extends React.Component {
     let isZooming = this.state.scale !== this.props.scale;
     // First we check that the page should be rendered
     if (this.props.display === true) {
-      // Check that the page isn't being rendered
-      if (this.state.working) return;
-      // Set the working state to true
-      this.setState({ working: true });
-
       // First, setup elements sizes
       this.setupSizes(() => {
-        // For calculate the time that took each page render
-        const start = performance.now();
-
         // If is zooming, create temporary canvas
         let tempCanvas;
         if (isZooming) {
@@ -63,34 +44,13 @@ export default class Page extends React.Component {
           );
         }
 
-        // Start rendering the page
-        renderPage(
-          this.props.page,
-          this.canvasRef.current,
-          this.props.scale,
-          () => {
-            // callback function that is executed after rendering is done
-            // Set working state to false.
-            this.setState({ working: false });
-
-            // if tempCanvas exists, remove it after 100ms.
-            window.setTimeout(() => {
-              if (tempCanvas) {
-                tempCanvas.parentNode.removeChild(tempCanvas);
-              }
-            }, 100);
-
-            // If debug, print in console.debug
-            if (this.props.debug) {
-              const total = performance.now() - start;
-              console.debug(
-                `[react-pdfjs] Page ${
-                  this.props.page.pageNumber
-                } rendered in ${Math.round(total)}ms`
-              );
+        this.doRender(() => {
+          window.setTimeout(() => {
+            if (tempCanvas) {
+              tempCanvas.parentNode.removeChild(tempCanvas);
             }
-          }
-        );
+          }, 100);
+        });
       });
     } else {
       if (isZooming) this.setupSizes();
@@ -98,33 +58,43 @@ export default class Page extends React.Component {
   }
 
   componentWillMount() {
-    if (!this.props.display) return;
-    this.setState({ working: true });
-
     this.setupSizes(() => {
-      const start = performance.now();
-      renderPage(
-        this.props.page,
-        this.canvasRef.current,
-        this.props.scale,
-        () => {
-          if (this.props.debug) {
-            const total = performance.now() - start;
-            console.debug(
-              `[react-pdfjs] Page ${
-                this.props.page.pageNumber
-              } rendered in ${Math.round(total)}ms`
-            );
-          }
-        }
-      );
+      if (this.props.display) {
+        this.doRender();
+      }
     });
   }
 
+  doRender = callback => {
+    if (this.state.isRendering) return;
+
+    this.setState({ isRendering: true });
+
+    const start = performance.now();
+
+    renderPage(this.props.obj, this.canvasRef.current, this.props.scale, () => {
+      this.setState({ isRendering: false });
+      if (this.props.debug) {
+        const total = performance.now() - start;
+        console.debug(
+          `[react-pdfjs] Page ${this.props.number} rendered in ${Math.round(
+            total
+          )}ms`
+        );
+      }
+      if (callback) callback();
+    });
+  };
+
   setupSizes = callback => {
-    const { page, scale } = this.props;
+    if (this.state.isRendering) {
+      callback();
+      return;
+    }
+
+    const { obj, scale } = this.props;
     const canvas = this.canvasRef.current;
-    const viewport = getViewport(page, scale, 0);
+    const viewport = getViewport(obj, scale, 0);
     let outputScale;
     if (canvas) {
       outputScale = getOutputScale(canvas.getContext("2d"));
@@ -133,10 +103,9 @@ export default class Page extends React.Component {
     }
 
     const sizes = {
-      cssWidth: viewport.width,
-      cssHeight: viewport.height,
-      width: viewport.width * outputScale.sx,
-      height: viewport.height * outputScale.sy
+      width: viewport.width,
+      height: viewport.height,
+      outputScale: outputScale
     };
 
     if (this.state.width === sizes.width) {
@@ -145,20 +114,31 @@ export default class Page extends React.Component {
     }
 
     this.setState({ ...sizes }, () => {
-      this.props.sizeChange(this.props.page.pageNumber);
+      if (this.props.sizeChange) {
+        this.props.sizeChange(this.props.page.pageNumber);
+      }
+
       if (typeof callback === "function") callback();
     });
   };
 
   render() {
     const { display } = this.props;
+    const { width, height, outputScale } = this.state;
+
+    const style = {
+      width: this.state.width,
+      height: this.state.height
+    };
+
+    const sizes = {
+      width: width * outputScale.sx,
+      height: height * outputScale.sy
+    };
+
     return (
-      <div
-        className="page"
-        ref={this.containerRef}
-        style={{ width: this.state.cssWidth, height: this.state.height }}
-      >
-        {display ? <canvas ref={this.canvasRef} /> : null}
+      <div className="page" ref={this.containerRef} style={style}>
+        {display ? <canvas ref={this.canvasRef} {...sizes} /> : null}
       </div>
     );
   }

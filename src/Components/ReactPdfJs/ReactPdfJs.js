@@ -1,4 +1,16 @@
 import React from "react";
+import Document from "./components/Document";
+import getSettings from "./core/settings";
+
+const ReactPdfJs = props => {
+  const settings = getSettings(props.settings);
+
+  return <Document settings={settings} url={props.url} />;
+};
+
+export default ReactPdfJs;
+
+/* import React from "react";
 import PDF from "pdfjs-dist";
 import Document from "./components/Document";
 import Page from "./components/Page";
@@ -47,9 +59,7 @@ export default class ReactPdfJs extends React.Component {
     return settingsToUse;
   };
 
-  /**
-   * Load the file in PDF.js
-   */
+  // Load the file in PDF.js
   loadFile() {
     const { pdf, settings } = this.state;
     const { url } = this.props;
@@ -355,3 +365,4 @@ export default class ReactPdfJs extends React.Component {
     );
   }
 }
+*/

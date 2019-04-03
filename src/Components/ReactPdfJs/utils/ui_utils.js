@@ -346,6 +346,9 @@ export const animateIt = (
   scroll();
 };
 
+/**
+ * @author Mozilla Foundation
+ */
 export const buildSVG = (viewport, textContent) => {
   // Building SVG with size of the viewport (for simplicity)
   var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg:svg");
