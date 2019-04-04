@@ -9,6 +9,7 @@ const settings = {
   pagesInMemoryAfter: 2,
   allowTextRendering: false,
   debug: false,
+  cleanMemory: true,
   exampleUrl: "files/quiroga.pdf"
 };
 

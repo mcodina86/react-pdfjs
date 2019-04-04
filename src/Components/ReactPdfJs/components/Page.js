@@ -20,6 +20,8 @@ export default class Page extends React.Component {
     if (prevProps.display !== this.props.display) {
       if (this.props.display) {
         this.doRender();
+      } else {
+        if (this.props.settings.cleanMemory) this.props.obj.cleanup();
       }
     } else {
       if (this.props.scale !== prevProps.scale) {
@@ -59,7 +61,7 @@ export default class Page extends React.Component {
 
     renderPage(this.props.obj, this.canvasRef.current, this.props.scale, () => {
       this.setState({ isRendering: false });
-      if (this.props.debug) {
+      if (this.props.settings.debug) {
         endDebug(start, `Rendering page ${this.props.number}`);
       }
       if (callback) callback();

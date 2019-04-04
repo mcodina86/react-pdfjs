@@ -19,7 +19,8 @@ export default class Document extends React.Component {
       currentPage: props.settings.startPage,
       pages: {},
       pagesIndex: [],
-      currentScale: props.settings.currentScale
+      currentScale: props.settings.currentScale,
+      currentRotation: 0
     };
   }
 
@@ -266,6 +267,15 @@ export default class Document extends React.Component {
     });
   };
 
+  onRotate = ccw => {
+    const { currentRotation } = this.state;
+    const angleChange = ccw ? 270 : 450; // 270: 360 - 90, 450: 360 + 90
+    const finalRotation = (currentRotation + angleChange) % 360;
+
+    console.log(finalRotation);
+    this.setState({ currentRotation: finalRotation });
+  };
+
   render() {
     const {
       pages,
@@ -273,7 +283,8 @@ export default class Document extends React.Component {
       currentScale,
       fileName,
       currentPage,
-      totalPages
+      totalPages,
+      currentRotation
     } = this.state;
 
     return (
@@ -283,6 +294,7 @@ export default class Document extends React.Component {
           page={currentPage}
           total={totalPages}
           goToPage={this.onGoToPage}
+          rotate={this.onRotate}
           doZoom={this.onDoZoom}
         />
         <div className="pdf" ref={this.pdfRef}>
@@ -294,7 +306,8 @@ export default class Document extends React.Component {
                   number={num}
                   obj={page.pageObject}
                   display={page.display}
-                  debug={this.props.settings.debug}
+                  settings={this.props.settings}
+                  rotation={currentRotation}
                   scale={currentScale}
                 />
               </div>
@@ -305,14 +318,3 @@ export default class Document extends React.Component {
     );
   }
 }
-
-/*
-
-const Document = React.forwardRef((props, ref) => (
-  <div className="pdf" ref={ref}>
-    {props.children}
-  </div>
-));
-
-export default Document;
-*/
