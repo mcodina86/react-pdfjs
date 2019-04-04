@@ -17,14 +17,18 @@ export default class Page extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (prevProps.display !== this.props.display) {
+    const scaleChanged = this.props.scale !== prevProps.scale;
+    const displayChanged = this.props.display !== prevProps.display;
+    const rotationChanged = this.props.rotation !== prevProps.rotation;
+
+    if (displayChanged) {
       if (this.props.display) {
         this.doRender();
       } else {
         if (this.props.settings.cleanMemory) this.props.obj.cleanup();
       }
     } else {
-      if (this.props.scale !== prevProps.scale) {
+      if (scaleChanged) {
         let tempCanvas;
         if (this.props.display) {
           tempCanvas = this.createTempCanvas();
@@ -38,6 +42,12 @@ export default class Page extends React.Component {
                 }
               }, 100);
             });
+          }
+        });
+      } else if (rotationChanged) {
+        this.setupSizes(() => {
+          if (this.props.display) {
+            this.doRender();
           }
         });
       }
@@ -58,11 +68,13 @@ export default class Page extends React.Component {
     this.setState({ isRendering: true });
 
     const start = startDebug();
+    const { obj, scale, rotation, settings, number } = this.props;
 
-    renderPage(this.props.obj, this.canvasRef.current, this.props.scale, () => {
+    renderPage(obj, this.canvasRef.current, scale, rotation, () => {
       this.setState({ isRendering: false });
-      if (this.props.settings.debug) {
-        endDebug(start, `Rendering page ${this.props.number}`);
+
+      if (settings.debug) {
+        endDebug(start, `Rendering page ${number}`);
       }
       if (callback) callback();
     });
@@ -86,9 +98,9 @@ export default class Page extends React.Component {
       return;
     }
 
-    const { obj, scale } = this.props;
+    const { obj, scale, rotation } = this.props;
     const canvas = this.canvasRef.current;
-    const viewport = obj.getViewport(scale, 0);
+    const viewport = obj.getViewport(scale, rotation);
     let outputScale;
     if (canvas) {
       outputScale = getOutputScale(canvas.getContext("2d"));

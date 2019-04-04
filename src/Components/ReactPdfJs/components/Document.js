@@ -272,8 +272,11 @@ export default class Document extends React.Component {
     const angleChange = ccw ? 270 : 450; // 270: 360 - 90, 450: 360 + 90
     const finalRotation = (currentRotation + angleChange) % 360;
 
-    console.log(finalRotation);
-    this.setState({ currentRotation: finalRotation });
+    this.setState({ currentRotation: finalRotation }, () => {
+      window.setTimeout(() => {
+        this.storeInCachePositions();
+      }, 100);
+    });
   };
 
   render() {
