@@ -1,6 +1,7 @@
 import React from "react";
 import { renderPage } from "../core/pdfjs-functions";
 import { getOutputScale, buildCanvas } from "../utils/ui_utils";
+import { startDebug, endDebug } from "../utils/debugger";
 import "./Page.css";
 
 export default class Page extends React.Component {
@@ -54,17 +55,12 @@ export default class Page extends React.Component {
 
     this.setState({ isRendering: true });
 
-    const start = performance.now();
+    const start = startDebug();
 
     renderPage(this.props.obj, this.canvasRef.current, this.props.scale, () => {
       this.setState({ isRendering: false });
       if (this.props.debug) {
-        const total = performance.now() - start;
-        console.debug(
-          `[react-pdfjs] Page ${this.props.number} rendered in ${Math.round(
-            total
-          )}ms`
-        );
+        endDebug(start, `Rendering page ${this.props.number}`);
       }
       if (callback) callback();
     });

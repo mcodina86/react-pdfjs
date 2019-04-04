@@ -7,6 +7,7 @@ import {
   getPDFFileNameFromURL,
   animateIt
 } from "../utils/ui_utils";
+import { startDebug, endDebug } from "../utils/debugger";
 import pdfJsLib from "pdfjs-dist";
 export default class Document extends React.Component {
   constructor(props) {
@@ -60,7 +61,7 @@ export default class Document extends React.Component {
    * Load the file with PDF.js
    */
   loadFile = () => {
-    let start = performance.now();
+    let start = startDebug();
     const { pdf } = this.state;
     const { url, settings } = this.props;
 
@@ -95,12 +96,7 @@ export default class Document extends React.Component {
       this.setState({ pdfProxy, fileName, totalPages }, () => {
         this.storePagesInState();
 
-        if (settings.debug) {
-          let total = performance.now() - start;
-          console.debug(
-            `[react-pdfjs] Loading file took ${Math.round(total)}ms`
-          );
-        }
+        if (settings.debug) endDebug(start, "Loading file");
       });
     });
   };
@@ -115,7 +111,7 @@ export default class Document extends React.Component {
 
   storePagesInState = () => {
     const { pdfProxy, totalPages } = this.state;
-    const start = performance.now();
+    const start = startDebug();
 
     // Instead storing the pages in an array, we use an object
     let pages = {};
@@ -141,12 +137,8 @@ export default class Document extends React.Component {
         pages[res.pageNumber] = pageToSave;
       });
       this.setState({ pagesIndex, pages }, () => {
-        if (this.props.settings.debug) {
-          const total = performance.now() - start;
-          console.debug(
-            `[react-pdfjs] Store pages in memory took ${Math.round(total)}ms`
-          );
-        }
+        if (this.props.settings.debug) endDebug(start, "Store pages in memory");
+
         this.setPagesToDisplay();
       });
     });
@@ -223,7 +215,7 @@ export default class Document extends React.Component {
   };
 
   storeInCachePositions = callback => {
-    const start = performance.now();
+    const start = startDebug();
 
     const { pagesIndex, pages } = this.state;
     let cachedPositions = {};
@@ -237,10 +229,7 @@ export default class Document extends React.Component {
     });
 
     this.setState({ cachedPositions }, () => {
-      if (this.props.settings.debug) {
-        const total = Math.round(performance.now() - start);
-        console.debug(`[react-pdfjs] get positions took ${total}ms`);
-      }
+      if (this.props.settings.debug) endDebug(start, "Get positions");
       if (callback) callback();
     });
   };
