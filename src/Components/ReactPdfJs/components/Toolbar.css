@@ -39,12 +39,13 @@
   );
   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#4c4c4c', endColorstr='#2e2e2e', GradientType=0 );
   color: #fff;
-  padding: 0.25em 1em;
-  line-height: 2em;
+  padding: 0 10px;
+  line-height: 50px;
 }
 
 .info,
-.pages {
+.pages,
+.actions {
   display: inline-block;
 }
 

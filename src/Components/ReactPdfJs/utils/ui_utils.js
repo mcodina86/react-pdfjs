@@ -1,6 +1,8 @@
 /* eslint-disable no-useless-escape */
 import pdfjsLib from "pdfjs-dist";
 
+export const pixelRatio = window.devicePixelRatio || 1;
+
 /**
  * Returns scale factor for the canvas. It makes sense for the HiDPI displays.
  * @return {Object} The object with horizontal (sx) and vertical (sy)
@@ -11,13 +13,19 @@ import pdfjsLib from "pdfjs-dist";
  */
 export const getOutputScale = ctx => {
   let devicePixelRatio = window.devicePixelRatio || 1;
-  let backingStoreRatio =
-    ctx.webkitBackingStorePixelRatio ||
-    ctx.mozBackingStorePixelRatio ||
-    ctx.msBackingStorePixelRatio ||
-    ctx.oBackingStorePixelRatio ||
-    ctx.backingStorePixelRatio ||
-    1;
+  let backingStoreRatio;
+  if (!ctx) {
+    backingStoreRatio = 1;
+  } else {
+    backingStoreRatio =
+      ctx.webkitBackingStorePixelRatio ||
+      ctx.mozBackingStorePixelRatio ||
+      ctx.msBackingStorePixelRatio ||
+      ctx.oBackingStorePixelRatio ||
+      ctx.backingStorePixelRatio ||
+      1;
+  }
+
   let pixelRatio = devicePixelRatio / backingStoreRatio;
   return {
     sx: pixelRatio,
@@ -338,6 +346,9 @@ export const animateIt = (
   scroll();
 };
 
+/**
+ * @author Mozilla Foundation
+ */
 export const buildSVG = (viewport, textContent) => {
   // Building SVG with size of the viewport (for simplicity)
   var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg:svg");
@@ -366,4 +377,36 @@ export const buildSVG = (viewport, textContent) => {
     svg.appendChild(text);
   });
   return svg;
+};
+
+/**
+ * Creates and return a new canvas
+ *
+ * @param {string} className
+ * @param {object} sizes {width, height, cssWidth, cssHeight}
+ * @param {HTMLElement} parent
+ * @param {HTMLCanvasElement} source
+ */
+export const buildCanvas = (className, sizes, parent, source) => {
+  let newCanvas = document.createElement("canvas");
+
+  if (sizes) {
+    newCanvas.width = sizes.width || 0;
+    newCanvas.height = sizes.height || 0;
+    newCanvas.style.width = sizes.cssWidth || sizes.width || 0;
+    newCanvas.style.height = sizes.cssHeight || sizes.height || 0;
+    newCanvas.className = className || "";
+  }
+
+  if (source) {
+    // console.log(source);
+    let newCanvasContext = newCanvas.getContext("2d");
+    newCanvasContext.drawImage(source, 0, 0, newCanvas.width, newCanvas.height);
+  }
+
+  if (parent) {
+    parent.appendChild(newCanvas);
+  }
+
+  return newCanvas;
 };
