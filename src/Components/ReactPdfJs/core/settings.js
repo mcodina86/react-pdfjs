@@ -10,7 +10,8 @@ const settings = {
   allowTextRendering: false,
   debug: false,
   cleanMemory: true,
-  exampleUrl: "files/quiroga.pdf"
+  exampleUrl: "files/quiroga.pdf",
+  workerURL: null
 };
 
 /**
