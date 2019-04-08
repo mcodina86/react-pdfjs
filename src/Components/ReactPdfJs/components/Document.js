@@ -20,7 +20,8 @@ export default class Document extends React.Component {
       pages: {},
       pagesIndex: [],
       currentScale: props.settings.currentScale,
-      currentRotation: 0
+      currentRotation: 0,
+      lastY: 0
     };
   }
 
@@ -50,7 +51,7 @@ export default class Document extends React.Component {
     this.loadFile();
 
     watchScroll(this.pdfRef.current, data => {
-      this.setPageNumberByScroll(data);
+      if (!this.state.forcedScrolling) this.setPageNumberByScroll(data);
     });
   }
 
@@ -190,8 +191,15 @@ export default class Document extends React.Component {
     } = this.state;
 
     let { lastY } = scrollData;
+    if (this.state.lastY !== lastY) {
+      this.setState({ lastY });
+    } else {
+      return;
+    }
 
-    let middle = lastY - viewerHeight / 2;
+    console.log("HOLA 23");
+
+    let middle = lastY - viewerHeight / 2.5;
 
     // Sometimes it doesn't work if you quickly scroll to top
     if (middle <= 1) {
@@ -240,17 +248,21 @@ export default class Document extends React.Component {
     let newPage = prev ? currentPage - 1 : currentPage + 1;
     if (newPage === 0 || newPage > totalPages) return;
 
+    this.setState({ forcedScrolling: true });
+
     if (!cachedPositions) {
       this.storeInCachePositions(() => this.onGoToPage(prev));
       return;
     }
 
-    this.setState({ forcedScrolling: true });
+    this.setState({ currentPage: newPage });
 
     const viewer = this.pdfRef.current;
     const offsetTop = cachedPositions[newPage].offsetTop;
-    animateIt(viewer, offsetTop, 100, "easeInOutQuad", 200, () => {
-      this.setState({ forcedScrolling: false });
+    animateIt(viewer, offsetTop, 75, "easeInOutQuad", 300, () => {
+      this.setState({ forcedScrolling: false, lastY: offsetTop - 75 }, () => {
+        this.setPagesToDisplay();
+      });
     });
   };
 
