@@ -2,7 +2,7 @@ import React from "react";
 import "./Toolbar.css";
 
 const Toolbar = props => {
-  var { name, page, total, goToPage, doZoom } = props;
+  var { name, page, total, goToPage, doZoom, rotate } = props;
   return (
     <div className="toolbar">
       <div className="info">{name}</div>
@@ -17,6 +17,8 @@ const Toolbar = props => {
       </div>
       <div className="actions">
         <button onClick={() => doZoom()}>Zoom</button>
+        <button onClick={() => rotate()}>Rotate CW</button>
+        <button onClick={() => rotate(true)}>Rotate CCW</button>
       </div>
     </div>
   );

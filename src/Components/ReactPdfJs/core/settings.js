@@ -9,7 +9,9 @@ const settings = {
   pagesInMemoryAfter: 2,
   allowTextRendering: false,
   debug: false,
-  exampleUrl: "files/quiroga.pdf"
+  cleanMemory: true,
+  exampleUrl: "files/quiroga.pdf",
+  workerURL: null
 };
 
 /**

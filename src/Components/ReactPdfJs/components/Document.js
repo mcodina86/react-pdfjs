@@ -7,6 +7,7 @@ import {
   getPDFFileNameFromURL,
   animateIt
 } from "../utils/ui_utils";
+import { startDebug, endDebug } from "../utils/debugger";
 import pdfJsLib from "pdfjs-dist";
 export default class Document extends React.Component {
   constructor(props) {
@@ -18,19 +19,20 @@ export default class Document extends React.Component {
       currentPage: props.settings.startPage,
       pages: {},
       pagesIndex: [],
-      currentScale: props.settings.currentScale
+      currentScale: props.settings.currentScale,
+      currentRotation: 0,
+      lastY: 0 // Just for prevent bug on manual and automatic scroll
     };
   }
 
   componentWillMount() {
     // Configure the pdf.js worker. Use current version worker from CDN instead the one
     // in node_modules because it doesn't work as expected when it's imported.
-    let url = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${
-      pdfJsLib.version
-    }/pdf.worker.js`;
-
-    // Setup the worker url
-    pdfJsLib.GlobalWorkerOptions.workerSrc = url;
+    if (!this.props.settings.workerURL) {
+      pdfJsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${
+        pdfJsLib.version
+      }/pdf.worker.js`;
+    }
 
     // Update the PDF object in the state
     this.setState({ pdf: pdfJsLib });
@@ -47,8 +49,9 @@ export default class Document extends React.Component {
     // Then load the file
     this.loadFile();
 
+    // Add event listener to scroll. Using pdf.js watchScroll function
     watchScroll(this.pdfRef.current, data => {
-      this.setPageNumberByScroll(data);
+      if (!this.state.forcedScrolling) this.setPageNumberByScroll(data);
     });
   }
 
@@ -60,7 +63,8 @@ export default class Document extends React.Component {
    * Load the file with PDF.js
    */
   loadFile = () => {
-    let start = performance.now();
+    let start = startDebug();
+
     const { pdf } = this.state;
     const { url, settings } = this.props;
 
@@ -75,10 +79,7 @@ export default class Document extends React.Component {
     let loading = 0;
 
     loadingObject.onProgress = progressData => {
-      // Simple 3 rule
-      // X === 100%
-      // Y === Z
-      // So, (Y * 100) / X = Z%
+      // Simple 3 rule - (loaded * 100%) / total = current%
       let temp = Math.round((progressData.loaded * 100) / progressData.total);
       // Sometimes, I don't know why, progressData.loaded is bigger than
       // progressData.total size. In that case, we should keep previous %
@@ -87,6 +88,8 @@ export default class Document extends React.Component {
       this.setState({ loading });
     };
 
+    // After the file is loaded, retrieve pdf information and object and store
+    // them in the state. Then, proceed to store each page.
     loadingObject.promise.then(pdfProxy => {
       const fileName = getPDFFileNameFromURL(urlToUse, "Unknown Document");
       const totalPages = pdfProxy.numPages;
@@ -95,16 +98,14 @@ export default class Document extends React.Component {
       this.setState({ pdfProxy, fileName, totalPages }, () => {
         this.storePagesInState();
 
-        if (settings.debug) {
-          let total = performance.now() - start;
-          console.debug(
-            `[react-pdfjs] Loading file took ${Math.round(total)}ms`
-          );
-        }
+        if (settings.debug) endDebug(start, "Loading file");
       });
     });
   };
 
+  /**
+   * Store viewer width and height in state.
+   */
   setupViewerSize = () => {
     let pdfContainer = this.pdfRef.current;
     const viewerWidth = pdfContainer.clientWidth;
@@ -113,9 +114,12 @@ export default class Document extends React.Component {
     this.setState({ viewerWidth, viewerHeight });
   };
 
+  /**
+   * Store each page in the state.
+   */
   storePagesInState = () => {
     const { pdfProxy, totalPages } = this.state;
-    const start = performance.now();
+    const start = startDebug();
 
     // Instead storing the pages in an array, we use an object
     let pages = {};
@@ -131,6 +135,7 @@ export default class Document extends React.Component {
       allPromises.push(pdfProxy.getPage(i));
     }
 
+    // After storing all pages in the state, start to display them
     Promise.all(allPromises).then(result => {
       result.forEach(res => {
         let pageToSave = {
@@ -141,21 +146,27 @@ export default class Document extends React.Component {
         pages[res.pageNumber] = pageToSave;
       });
       this.setState({ pagesIndex, pages }, () => {
-        if (this.props.settings.debug) {
-          const total = performance.now() - start;
-          console.debug(
-            `[react-pdfjs] Store pages in memory took ${Math.round(total)}ms`
-          );
-        }
+        if (this.props.settings.debug) endDebug(start, "Store pages in memory");
+
         this.setPagesToDisplay();
       });
     });
   };
 
+  /**
+   * Display the current page and the next and above. Displaying all pages could
+   * generate memory issues.
+   *
+   * pagesInMemoryBefore: this setting says how many previous pages should show
+   * pagesInMemoryAfter: this setting says how many next pages should show
+   *
+   * @param {function} callback
+   */
   setPagesToDisplay = callback => {
     const { currentPage, pages, totalPages, pagesIndex } = this.state;
     const { pagesInMemoryBefore, pagesInMemoryAfter } = this.props.settings;
 
+    // Array for storing which pages should be rendered
     let queue = [currentPage];
 
     for (var i = 1; i <= parseInt(pagesInMemoryBefore); i++) {
@@ -172,6 +183,8 @@ export default class Document extends React.Component {
 
     let updatedPages = pages;
 
+    // If page is in queue array, set display to true. This will
+    // trigger rendering in Page.js
     pagesIndex.forEach(num => {
       updatedPages[num].display = queue.indexOf(num) > -1;
     });
@@ -181,9 +194,18 @@ export default class Document extends React.Component {
     });
   };
 
+  /**
+   * This function is executed when the user is doing scroll. Refresh the page
+   * number based on the current viewer scroll position.
+   *
+   * @param {{}} scrollData Scroll object retrieved by pdf.js watchScroll function
+   */
   setPageNumberByScroll = scrollData => {
+    // If it's automatic scroll just prevent execution.
     if (this.state.forcedScrolling) return false;
 
+    // If pages positions aren't in cache, just call storeInCachePositions passing
+    // this function as callback
     if (!this.state.cachedPositions) {
       this.storeInCachePositions(() => this.setPageNumberByScroll(scrollData));
       return;
@@ -197,8 +219,17 @@ export default class Document extends React.Component {
     } = this.state;
 
     let { lastY } = scrollData;
+    // If the lastY position is the same as the current, prevent execution, if not,
+    // store the current position in the state.
+    // In a future we should delete this, or use a better alternative. It now exists
+    // because animateIt function used by goToPate buttons triggers two scroll actions
+    if (this.state.lastY !== lastY) {
+      this.setState({ lastY });
+    } else {
+      return;
+    }
 
-    let middle = lastY - viewerHeight / 2;
+    let middle = lastY - viewerHeight / 2.5;
 
     // Sometimes it doesn't work if you quickly scroll to top
     if (middle <= 1) {
@@ -222,8 +253,13 @@ export default class Document extends React.Component {
     }
   };
 
+  /**
+   * We store the pages positions in cache. This cache is used by setPageNumberByScroll
+   *
+   * @param {function} callback Function that will be executed when the function finishes
+   */
   storeInCachePositions = callback => {
-    const start = performance.now();
+    const start = startDebug();
 
     const { pagesIndex, pages } = this.state;
     let cachedPositions = {};
@@ -237,33 +273,52 @@ export default class Document extends React.Component {
     });
 
     this.setState({ cachedPositions }, () => {
-      if (this.props.settings.debug) {
-        const total = Math.round(performance.now() - start);
-        console.debug(`[react-pdfjs] get positions took ${total}ms`);
-      }
+      if (this.props.settings.debug) endDebug(start, "Get positions");
       if (callback) callback();
     });
   };
 
+  /**
+   * Handles Toolbar's prev and next button actions.
+   *
+   * @param {boolean} prev If we should go to previous page
+   */
   onGoToPage = prev => {
     const { currentPage, totalPages, cachedPositions } = this.state;
     let newPage = prev ? currentPage - 1 : currentPage + 1;
+    // if the newPage doesn't exists, quit function
     if (newPage === 0 || newPage > totalPages) return;
 
+    // We set forcedScrolling to true, for preventing setPageNumberByScroll
+    // getting triggered
+    this.setState({ forcedScrolling: true });
+
+    // If pages positions aren't in cache yet, call storeInCachePositions passing
+    // this function as callback
     if (!cachedPositions) {
       this.storeInCachePositions(() => this.onGoToPage(prev));
       return;
     }
 
-    this.setState({ forcedScrolling: true });
+    // Set the current page
+    this.setState({ currentPage: newPage });
 
     const viewer = this.pdfRef.current;
     const offsetTop = cachedPositions[newPage].offsetTop;
-    animateIt(viewer, offsetTop, 100, "easeInOutQuad", 200, () => {
-      this.setState({ forcedScrolling: false });
+    animateIt(viewer, offsetTop, 75, "easeInOutQuad", 300, () => {
+      // Store lastY position, forcedScrolling to false
+      this.setState({ forcedScrolling: false, lastY: offsetTop - 75 }, () => {
+        // and then update which pages should we render
+        this.setPagesToDisplay();
+      });
     });
   };
 
+  /**
+   * Change the zoom using the current scale and the zoom step
+   *
+   * @param {boolean} minus if is zoom out
+   */
   onDoZoom = minus => {
     const { minScale, maxScale, zoomStep } = this.props.settings;
     const { currentScale } = this.state;
@@ -271,6 +326,23 @@ export default class Document extends React.Component {
     if (newScale > maxScale || newScale < minScale) return;
 
     this.setState({ currentScale: newScale }, () => {
+      window.setTimeout(() => {
+        this.storeInCachePositions();
+      }, 100);
+    });
+  };
+
+  /**
+   * Rotate the file
+   *
+   * @param {boolean} ccw If is counter clockwise
+   */
+  onRotate = ccw => {
+    const { currentRotation } = this.state;
+    const angleChange = ccw ? 270 : 450; // 270: 360 - 90, 450: 360 + 90
+    const finalRotation = (currentRotation + angleChange) % 360;
+
+    this.setState({ currentRotation: finalRotation }, () => {
       window.setTimeout(() => {
         this.storeInCachePositions();
       }, 100);
@@ -285,7 +357,8 @@ export default class Document extends React.Component {
       fileName,
       currentPage,
       totalPages,
-      loading
+      loading,
+      currentRotation
     } = this.state;
 
     return (
@@ -295,6 +368,7 @@ export default class Document extends React.Component {
           page={currentPage}
           total={totalPages}
           goToPage={this.onGoToPage}
+          rotate={this.onRotate}
           doZoom={this.onDoZoom}
         />
         <div className="pdf" ref={this.pdfRef}>
@@ -307,7 +381,8 @@ export default class Document extends React.Component {
                   number={num}
                   obj={page.pageObject}
                   display={page.display}
-                  debug={this.props.settings.debug}
+                  settings={this.props.settings}
+                  rotation={currentRotation}
                   scale={currentScale}
                 />
               </div>
@@ -318,14 +393,3 @@ export default class Document extends React.Component {
     );
   }
 }
-
-/*
-
-const Document = React.forwardRef((props, ref) => (
-  <div className="pdf" ref={ref}>
-    {props.children}
-  </div>
-));
-
-export default Document;
-*/
