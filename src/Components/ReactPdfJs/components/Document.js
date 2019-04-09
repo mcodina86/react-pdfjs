@@ -371,8 +371,8 @@ export default class Document extends React.Component {
           rotate={this.onRotate}
           doZoom={this.onDoZoom}
         />
+        <Progressbar loading={loading} />
         <div className="pdf" ref={this.pdfRef}>
-          <Progressbar loading={loading} />
           {pagesIndex.map(num => {
             let page = pages[num];
             return (
