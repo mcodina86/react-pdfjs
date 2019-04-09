@@ -15,7 +15,7 @@ export const getViewport = (page, scale, rotation) => {
  * @param {Function} callback
  * @param {Function} error
  */
-export const renderPage = (page, canvas, scale, callback, error) => {
+export const renderPage = (page, canvas, scale, rotation, callback, error) => {
   if (!canvas) {
     console.error("renderPage need a canvas!");
     if (typeof error === "function") error();
@@ -30,7 +30,7 @@ export const renderPage = (page, canvas, scale, callback, error) => {
 
   let canvasContext = canvas.getContext("2d");
   let outputScale = getOutputScale(canvasContext);
-  let viewport = page.getViewport(scale, 0);
+  let viewport = page.getViewport(scale, rotation);
 
   let transform = !outputScale.scaled
     ? null
