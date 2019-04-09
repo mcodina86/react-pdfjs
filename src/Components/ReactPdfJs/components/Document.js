@@ -23,7 +23,8 @@ export default class Document extends React.Component {
       currentRotation: 0,
       firstPageWidth: 0, // for recovering scroll position after zoom
       firstPageHeight: 0, // for recovering scroll position after zoom
-      lastY: 0 // Just for prevent bug on manual and automatic scroll
+      lastY: 0, // Just for prevent bug on manual and automatic scroll,
+      lastX: 0
     };
   }
 
@@ -235,13 +236,14 @@ export default class Document extends React.Component {
       viewerHeight
     } = this.state;
 
-    let { lastY } = scrollData;
+    let { lastX, lastY } = scrollData;
     // If the lastY position is the same as the current, prevent execution, if not,
     // store the current position in the state.
     // In a future we should delete this, or use a better alternative. It now exists
     // because animateIt function used by goToPate buttons triggers two scroll actions
+    if (this.state.lastX !== lastX) this.setState({ lastX });
     if (this.state.lastY !== lastY) {
-      this.setState({ lastY });
+      this.setState({ lastY, lastX });
     } else {
       return;
     }
@@ -304,19 +306,31 @@ export default class Document extends React.Component {
     const oldHeight = this.state.firstPageHeight;
     const newSizes = this.storePageSizes();
 
-    var pixelsToZoom = 0;
-    var zoomedPixels = 0;
+    let pixelsToZoomY = 0;
+    let zoomedPixelsY = 0;
+    let pixelsToZoomX = 0;
+    let zoomedPixelsX = 0;
 
-    var oldOffsetY = this.state.lastY;
+    const oldOffsetY = this.state.lastY;
+    const oldOffsetX = this.state.lastX;
 
-    var zoomFactorForPage = newSizes.firstPageHeight / oldHeight;
+    const zoomFactorForPage = newSizes.firstPageHeight / oldHeight;
 
-    var partOfPageAboveUpperBorder = oldOffsetY - (pixelsToZoom + emptySpace);
-    zoomedPixels += Math.round(partOfPageAboveUpperBorder * zoomFactorForPage);
+    const partOfPageAboveUpperBorderY =
+      oldOffsetY - (pixelsToZoomY + emptySpace);
+    zoomedPixelsY += Math.round(
+      partOfPageAboveUpperBorderY * zoomFactorForPage
+    );
 
-    pixelsToZoom += partOfPageAboveUpperBorder;
+    const partOfPageAboveUpperBorderX = oldOffsetX - pixelsToZoomX;
+    zoomedPixelsX += Math.round(
+      partOfPageAboveUpperBorderX * zoomFactorForPage
+    );
+    pixelsToZoomX += partOfPageAboveUpperBorderX;
+    pixelsToZoomY += partOfPageAboveUpperBorderY;
 
-    this.pdfRef.current.scrollTop = zoomedPixels + emptySpace;
+    this.pdfRef.current.scrollTop = zoomedPixelsY + emptySpace;
+    this.pdfRef.current.scrollLeft = zoomedPixelsX;
     this.setState({ forcedScrolling: false });
   };
 
