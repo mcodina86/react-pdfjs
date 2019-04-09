@@ -14,6 +14,26 @@ body {
 }
 
 .pdf {
+  position: relative;
   overflow: auto;
   height: calc(100% - 50px);
+}
+
+.progressbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+}
+
+.progressbar__bar {
+  background: red;
+  height: 5px;
+  display: block;
+}
+
+.progressbar__text {
+  display: block;
+  margin: 15px;
 }

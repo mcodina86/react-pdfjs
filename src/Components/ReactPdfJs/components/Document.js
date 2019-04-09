@@ -1,6 +1,6 @@
 import React from "react";
 import Page from "./Page";
-/* import Progressbar from "./components/Progressbar"; */
+import Progressbar from "./Progressbar";
 import Toolbar from "./Toolbar";
 import {
   watchScroll,
@@ -284,7 +284,8 @@ export default class Document extends React.Component {
       currentScale,
       fileName,
       currentPage,
-      totalPages
+      totalPages,
+      loading
     } = this.state;
 
     return (
@@ -297,6 +298,7 @@ export default class Document extends React.Component {
           doZoom={this.onDoZoom}
         />
         <div className="pdf" ref={this.pdfRef}>
+          <Progressbar loading={loading} />
           {pagesIndex.map(num => {
             let page = pages[num];
             return (
