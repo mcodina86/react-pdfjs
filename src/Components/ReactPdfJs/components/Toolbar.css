@@ -39,13 +39,14 @@
   );
   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#4c4c4c', endColorstr='#2e2e2e', GradientType=0 );
   color: #fff;
-  padding: 0 1em;
+  padding: 0 10px;
+  line-height: 50px;
 }
 
 .info,
-.pages {
+.pages,
+.actions {
   display: inline-block;
-  line-height: 2.5em;
 }
 
 .info {
@@ -61,4 +62,29 @@
 .actions {
   width: 25%;
   text-align: right;
+}
+
+.page-link {
+  display: inline-block;
+}
+
+.page-link.is-previous {
+  margin-right: 10px;
+  padding-right: 10px;
+  border-right: 1px solid rgba(76, 76, 76, 0.5);
+}
+
+.page-link.is-next {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(76, 76, 76, 0.5);
+}
+
+.page-link button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
 }

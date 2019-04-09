@@ -1,14 +1,39 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
 .viewer {
-  overflow-y: auto;
-  overflow-y: scroll;
   background: #ccc;
-  height: calc(80vh - 100px);
-  width: calc(80vw - 100px);
+  height: calc(100vh - 50px);
+  width: calc(100vw - 10px);
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.2);
+  margin: 0 auto;
 }
 
 .pdf {
+  position: relative;
   overflow: auto;
-  height: calc(100% - 2.5em);
+  height: calc(100% - 50px);
+}
+
+.progressbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+}
+
+.progressbar__bar {
+  background: red;
+  height: 5px;
+  display: block;
+}
+
+.progressbar__text {
+  display: block;
+  margin: 15px;
 }

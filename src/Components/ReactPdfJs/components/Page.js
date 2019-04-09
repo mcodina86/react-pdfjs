@@ -1,5 +1,6 @@
 import React from "react";
-import { getOutputScale } from "../utils/ui_utils";
+import { renderPage } from "../core/pdfjs-functions";
+import { getOutputScale, buildCanvas } from "../utils/ui_utils";
 import "./Page.css";
 
 export default class Page extends React.Component {
@@ -7,104 +8,133 @@ export default class Page extends React.Component {
     super(props);
     this.canvasRef = React.createRef();
     this.containerRef = React.createRef();
+
+    this.state = {
+      scale: this.props.scale,
+      isRendering: false
+    };
   }
 
-  state = {
-    rendering: false,
-    display: this.props.page.display,
-    position: { x: 0, y: 0 },
-    sizes: {
-      width: 0,
-      height: 0,
-      cssWidth: this.props.page.sizes.width,
-      cssHeight: this.props.page.sizes.height
-    }
-  };
-
-  componentDidMount() {
-    let { display, position } = this.state;
-    const { onPositionsSetted, number } = this.props;
-    if (display) this.doRender();
-    if (this.containerRef.current) {
-      position.x = this.containerRef.current.offsetLeft;
-      position.y = this.containerRef.current.offsetTop;
-      onPositionsSetted(number, position);
-      this.setState({ position });
-    }
-  }
-
-  componentWillUpdate() {
-    let { page } = this.props;
-    let { display } = this.state;
-    if (page.display !== display) {
-      this.setState({ display: page.display });
-      if (page.display) {
+  componentDidUpdate(prevProps, prevState) {
+    if (prevProps.display !== this.props.display) {
+      if (this.props.display) {
         this.doRender();
+      }
+    } else {
+      if (this.props.scale !== prevProps.scale) {
+        let tempCanvas;
+        if (this.props.display) {
+          tempCanvas = this.createTempCanvas();
+        }
+        this.setupSizes(() => {
+          if (this.props.display) {
+            this.doRender(() => {
+              window.setTimeout(() => {
+                if (tempCanvas) {
+                  tempCanvas.parentNode.removeChild(tempCanvas);
+                }
+              }, 100);
+            });
+          }
+        });
       }
     }
   }
 
-  doRender = () => {
+  componentWillMount() {
+    this.setupSizes(() => {
+      if (this.props.display) {
+        this.doRender();
+      }
+    });
+  }
+
+  doRender = callback => {
+    if (this.state.isRendering) return;
+
+    this.setState({ isRendering: true });
+
+    const start = performance.now();
+
+    renderPage(this.props.obj, this.canvasRef.current, this.props.scale, () => {
+      this.setState({ isRendering: false });
+      if (this.props.debug) {
+        const total = performance.now() - start;
+        console.debug(
+          `[react-pdfjs] Page ${this.props.number} rendered in ${Math.round(
+            total
+          )}ms`
+        );
+      }
+      if (callback) callback();
+    });
+  };
+
+  createTempCanvas = () => {
+    const { width, height, cssWidth, cssHeight } = this.state;
+    let tempCanvas = buildCanvas(
+      "tempCanvas",
+      { width, height, cssWidth, cssHeight },
+      this.containerRef.current,
+      this.canvasRef.current
+    );
+
+    return tempCanvas;
+  };
+
+  setupSizes = callback => {
+    if (this.state.isRendering) {
+      callback();
+      return;
+    }
+
+    const { obj, scale } = this.props;
     const canvas = this.canvasRef.current;
-    if (!canvas) return;
+    const viewport = obj.getViewport(scale, 0);
+    let outputScale;
+    if (canvas) {
+      outputScale = getOutputScale(canvas.getContext("2d"));
+    } else {
+      outputScale = getOutputScale();
+    }
 
-    let { rendering } = this.state;
-    const { settings, page } = this.props;
-    const obj = page.obj;
-
-    // Checking page isn't rendering before start doing it
-    if (rendering) return;
-    this.setState({ rendering: true });
-
-    let canvasContext = canvas.getContext("2d");
-    let outputScale = getOutputScale(canvasContext);
-    let viewport = obj.getViewport(settings.currentScale, settings.rotation);
-    // Set sizes:
-    var sizes = {
-      width: viewport.width * outputScale.sx,
-      height: viewport.height * outputScale.sy,
-      cssWidth: viewport.width,
-      cssHeight: viewport.height
+    const sizes = {
+      width: viewport.width,
+      height: viewport.height,
+      outputScale: outputScale
     };
-    this.setState({ sizes });
 
-    let transform = !outputScale.scaled
-      ? null
-      : [outputScale.sx, 0, 0, outputScale.sy, 0, 0];
+    if (this.state.width === sizes.width) {
+      if (typeof callback === "function") callback();
+      return;
+    }
 
-    let renderContext = { canvasContext, viewport, transform };
+    this.setState({ ...sizes }, () => {
+      if (this.props.sizeChange) {
+        this.props.sizeChange(this.props.page.pageNumber);
+      }
 
-    // Start rendering
-    obj
-      .render(renderContext)
-      .then(() => {
-        this.setState({ rendering: false });
-        console.debug(`Page ${this.props.number} rendered`);
-      })
-      .catch(error => {
-        console.error(error);
-      });
+      if (typeof callback === "function") callback();
+    });
   };
 
   render() {
-    const { page, number } = this.props;
-    const { width, cssWidth, height, cssHeight } = this.state.sizes;
-    const sizes = { width: cssWidth, height: cssHeight };
+    const { display } = this.props;
+    const { width, height, outputScale } = this.state;
+
+    const style = {
+      width: this.state.width,
+      height: this.state.height
+    };
+
+    const sizes = {
+      width: width * outputScale.sx,
+      height: height * outputScale.sy
+    };
+
     return (
-      <div
-        className={`page page-${number}`}
-        style={sizes}
-        ref={this.containerRef}
-      >
-        {page.display ? (
-          <canvas
-            className={`canvas-page-${number}`}
-            ref={this.canvasRef}
-            width={width}
-            height={height}
-            style={sizes}
-          />
-        ) : null}
+      <div className="page" ref={this.containerRef} style={style}>
+        {display ? <canvas ref={this.canvasRef} {...sizes} /> : null}
       </div>
     );
   }
