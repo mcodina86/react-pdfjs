@@ -54,7 +54,7 @@ export default class Document extends React.Component {
 
     // Add event listener to scroll. Using pdf.js watchScroll function
     watchScroll(this.pdfRef.current, data => {
-      if (!this.state.forcedScrolling) this.setPageNumberByScroll(data);
+      if (!this.state.forcedScrolling) this.handleScroll(data);
     });
   }
 
@@ -218,62 +218,58 @@ export default class Document extends React.Component {
    *
    * @param {{}} scrollData Scroll object retrieved by pdf.js watchScroll function
    */
-  setPageNumberByScroll = scrollData => {
+  handleScroll = scrollData => {
     // If it's automatic scroll just prevent execution.
     if (this.state.forcedScrolling) return false;
 
     // If pages positions aren't in cache, just call storeInCachePositions passing
     // this function as callback
     if (!this.state.cachedPositions) {
-      this.storeInCachePositions(() => this.setPageNumberByScroll(scrollData));
+      this.storeInCachePositions(() => this.handleScroll(scrollData));
       return;
     }
-
-    const {
-      pagesIndex,
-      currentPage,
-      cachedPositions,
-      viewerHeight
-    } = this.state;
 
     let { lastX, lastY } = scrollData;
     // If the lastY position is the same as the current, prevent execution, if not,
     // store the current position in the state.
     // In a future we should delete this, or use a better alternative. It now exists
     // because animateIt function used by goToPate buttons triggers two scroll actions
+    this.setState({ scrollIsToBottom: scrollData.down });
     if (this.state.lastX !== lastX) this.setState({ lastX });
     if (this.state.lastY !== lastY) {
-      this.setState({ lastY, lastX });
-    } else {
-      return;
-    }
-
-    let middle = lastY - viewerHeight / 2.5;
-
-    // Sometimes it doesn't work if you quickly scroll to top
-    if (middle <= 1) {
-      if (currentPage !== 1) {
-        this.setState({ currentPage: 1 });
-        this.setPagesToDisplay();
-      }
-      return;
-    }
-
-    let positions = pagesIndex.map(num => cachedPositions[num].offsetTop);
-
-    let closest = positions.reduce(function(prev, curr) {
-      return Math.abs(curr - middle) < Math.abs(prev - middle) ? curr : prev;
-    });
-
-    if (currentPage !== positions.indexOf(closest) + 1) {
-      this.setState({ currentPage: positions.indexOf(closest) + 1 }, () => {
-        this.setPagesToDisplay();
+      this.setState({ lastY }, () => {
+        this.setPageNumberByScroll();
       });
     }
   };
 
+  setPageNumberByScroll = () => {
+    const {
+      pagesIndex,
+      cachedPositions,
+      viewerHeight,
+      lastY,
+      scrollIsToBottom
+    } = this.state;
+
+    let range = {
+      top: lastY + viewerHeight / 1.5,
+      bottom: lastY + viewerHeight / 2.5
+    };
+
+    pagesIndex.forEach(num => {
+      var pos = cachedPositions[num].offsetTop;
+      if (pos >= range.bottom && pos < range.top) {
+        let pageNumber = scrollIsToBottom ? num : num - 1;
+        this.setState({ currentPage: pageNumber }, () => {
+          this.setPagesToDisplay();
+        });
+      }
+    });
+  };
+
   /**
-   * We store the pages positions in cache. This cache is used by setPageNumberByScroll
+   * We store the pages positions in cache. This cache is used by handleScroll
    *
    * @param {function} callback Function that will be executed when the function finishes
    */
@@ -347,7 +343,7 @@ export default class Document extends React.Component {
     // if the newPage doesn't exists, quit function
     if (newPage === 0 || newPage > totalPages) return;
 
-    // We set forcedScrolling to true, for preventing setPageNumberByScroll
+    // We set forcedScrolling to true, for preventing handleScroll
     // getting triggered
     this.setState({ forcedScrolling: true });
 
