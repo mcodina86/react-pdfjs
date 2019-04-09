@@ -244,6 +244,7 @@ export default class Document extends React.Component {
   };
 
   setPageNumberByScroll = () => {
+    if (this.state.isZooming) return;
     const {
       pagesIndex,
       cachedPositions,
@@ -297,37 +298,38 @@ export default class Document extends React.Component {
    * Recover position after zoom
    */
   recoverScrollPosition = () => {
-    this.setState({ forcedScrolling: true });
-    const { emptySpace } = this.props.settings;
-    const oldHeight = this.state.firstPageHeight;
-    const newSizes = this.storePageSizes();
+    this.setState({ forcedScrolling: true }, () => {
+      const { emptySpace } = this.props.settings;
+      const oldHeight = this.state.firstPageHeight;
+      const newSizes = this.storePageSizes();
 
-    let pixelsToZoomY = 0;
-    let zoomedPixelsY = 0;
-    let pixelsToZoomX = 0;
-    let zoomedPixelsX = 0;
+      let pixelsToZoomY = 0;
+      let zoomedPixelsY = 0;
+      let pixelsToZoomX = 0;
+      let zoomedPixelsX = 0;
 
-    const oldOffsetY = this.state.lastY;
-    const oldOffsetX = this.state.lastX;
+      const oldOffsetY = this.state.lastY;
+      const oldOffsetX = this.state.lastX;
 
-    const zoomFactorForPage = newSizes.firstPageHeight / oldHeight;
+      const zoomFactorForPage = newSizes.firstPageHeight / oldHeight;
 
-    const partOfPageAboveUpperBorderY =
-      oldOffsetY - (pixelsToZoomY + emptySpace);
-    zoomedPixelsY += Math.round(
-      partOfPageAboveUpperBorderY * zoomFactorForPage
-    );
+      const partOfPageAboveUpperBorderY =
+        oldOffsetY - (pixelsToZoomY + emptySpace);
+      zoomedPixelsY += Math.round(
+        partOfPageAboveUpperBorderY * zoomFactorForPage
+      );
 
-    const partOfPageAboveUpperBorderX = oldOffsetX - pixelsToZoomX;
-    zoomedPixelsX += Math.round(
-      partOfPageAboveUpperBorderX * zoomFactorForPage
-    );
-    pixelsToZoomX += partOfPageAboveUpperBorderX;
-    pixelsToZoomY += partOfPageAboveUpperBorderY;
+      const partOfPageAboveUpperBorderX = oldOffsetX - pixelsToZoomX;
+      zoomedPixelsX += Math.round(
+        partOfPageAboveUpperBorderX * zoomFactorForPage
+      );
+      pixelsToZoomX += partOfPageAboveUpperBorderX;
+      pixelsToZoomY += partOfPageAboveUpperBorderY;
 
-    this.pdfRef.current.scrollTop = zoomedPixelsY + emptySpace;
-    this.pdfRef.current.scrollLeft = zoomedPixelsX;
-    this.setState({ forcedScrolling: false });
+      this.pdfRef.current.scrollTop = zoomedPixelsY + emptySpace;
+      this.pdfRef.current.scrollLeft = zoomedPixelsX;
+      this.setState({ forcedScrolling: false });
+    });
   };
 
   /**
@@ -391,11 +393,13 @@ export default class Document extends React.Component {
     }
 
     if (newScale > maxScale || newScale < minScale) return;
-
-    this.setState({ currentScale: newScale }, () => {
-      window.setTimeout(() => {
-        this.storeInCachePositions();
-      }, 100);
+    this.setState({ isZooming: true }, () => {
+      this.setState({ currentScale: newScale }, () => {
+        window.setTimeout(() => {
+          this.storeInCachePositions();
+          this.setState({ isZooming: false });
+        }, 100);
+      });
     });
   };
 
