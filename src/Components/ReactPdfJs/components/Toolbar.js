@@ -16,9 +16,10 @@ const Toolbar = props => {
         </span>
       </div>
       <div className="actions">
-        <button onClick={() => doZoom()}>Zoom</button>
-        <button onClick={() => rotate()}>Rotate CW</button>
-        <button onClick={() => rotate(true)}>Rotate CCW</button>
+        <button onClick={() => doZoom()}>Zoom In</button>
+        <button onClick={() => doZoom(true)}>Zoom Out</button>
+        <button onClick={() => rotate()}>CW</button>
+        <button onClick={() => rotate(true)}>CCW</button>
       </div>
     </div>
   );
