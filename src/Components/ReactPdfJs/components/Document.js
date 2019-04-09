@@ -21,6 +21,8 @@ export default class Document extends React.Component {
       pagesIndex: [],
       currentScale: props.settings.currentScale,
       currentRotation: 0,
+      firstPageWidth: 0, // for recovering scroll position after zoom
+      firstPageHeight: 0, // for recovering scroll position after zoom
       lastY: 0 // Just for prevent bug on manual and automatic scroll
     };
   }
@@ -147,10 +149,25 @@ export default class Document extends React.Component {
       });
       this.setState({ pagesIndex, pages }, () => {
         if (this.props.settings.debug) endDebug(start, "Store pages in memory");
-
+        this.storePageSizes();
         this.setPagesToDisplay();
       });
     });
+  };
+
+  /**
+   * Store the first (or desired) page sizes
+   *
+   * @param {number} page Defaults 1
+   */
+  storePageSizes = (page = 1) => {
+    const { pages } = this.state;
+    const pageDiv = pages[page].ref.current.getElementsByTagName("div")[0];
+
+    const firstPageHeight = pageDiv.clientHeight;
+    const firstPageWidth = pageDiv.clientWidth;
+    this.setState({ firstPageHeight, firstPageWidth });
+    return { firstPageHeight, firstPageWidth };
   };
 
   /**
@@ -279,12 +296,39 @@ export default class Document extends React.Component {
   };
 
   /**
+   * Recover position after zoom
+   */
+  recoverScrollPosition = () => {
+    this.setState({ forcedScrolling: true });
+    const { emptySpace } = this.props.settings;
+    const oldHeight = this.state.firstPageHeight;
+    const newSizes = this.storePageSizes();
+
+    var pixelsToZoom = 0;
+    var zoomedPixels = 0;
+
+    var oldOffsetY = this.state.lastY;
+
+    var zoomFactorForPage = newSizes.firstPageHeight / oldHeight;
+
+    var partOfPageAboveUpperBorder = oldOffsetY - (pixelsToZoom + emptySpace);
+    zoomedPixels += Math.round(partOfPageAboveUpperBorder * zoomFactorForPage);
+
+    pixelsToZoom += partOfPageAboveUpperBorder;
+
+    this.pdfRef.current.scrollTop = zoomedPixels + emptySpace;
+    this.setState({ forcedScrolling: false });
+  };
+
+  /**
    * Handles Toolbar's prev and next button actions.
    *
    * @param {boolean} prev If we should go to previous page
    */
   onGoToPage = prev => {
     const { currentPage, totalPages, cachedPositions } = this.state;
+    const { emptySpace } = this.props.settings;
+
     let newPage = prev ? currentPage - 1 : currentPage + 1;
     // if the newPage doesn't exists, quit function
     if (newPage === 0 || newPage > totalPages) return;
@@ -305,12 +349,15 @@ export default class Document extends React.Component {
 
     const viewer = this.pdfRef.current;
     const offsetTop = cachedPositions[newPage].offsetTop;
-    animateIt(viewer, offsetTop, 75, "easeInOutQuad", 300, () => {
+    animateIt(viewer, offsetTop, emptySpace, "easeInOutQuad", 300, () => {
       // Store lastY position, forcedScrolling to false
-      this.setState({ forcedScrolling: false, lastY: offsetTop - 75 }, () => {
-        // and then update which pages should we render
-        this.setPagesToDisplay();
-      });
+      this.setState(
+        { forcedScrolling: false, lastY: offsetTop - emptySpace },
+        () => {
+          // and then update which pages should we render
+          this.setPagesToDisplay();
+        }
+      );
     });
   };
 
@@ -384,6 +431,7 @@ export default class Document extends React.Component {
                   settings={this.props.settings}
                   rotation={currentRotation}
                   scale={currentScale}
+                  sizeChange={this.recoverScrollPosition}
                 />
               </div>
             );
