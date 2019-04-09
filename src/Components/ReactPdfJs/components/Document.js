@@ -364,12 +364,22 @@ export default class Document extends React.Component {
   /**
    * Change the zoom using the current scale and the zoom step
    *
-   * @param {boolean} minus if is zoom out
+   * @param {number} zoomDirection 1 = zoom in, 0 = default zoom, -1 = zoom out
    */
-  onDoZoom = minus => {
+  onDoZoom = zoomDirection => {
     const { minScale, maxScale, zoomStep } = this.props.settings;
+    const defaultScale = this.props.settings.currentScale;
     const { currentScale } = this.state;
-    let newScale = minus ? currentScale - zoomStep : currentScale + zoomStep;
+
+    let newScale;
+    if (zoomDirection === 0) {
+      newScale = defaultScale;
+    } else if (zoomDirection > 0) {
+      newScale = currentScale + zoomStep;
+    } else {
+      newScale = currentScale - zoomStep;
+    }
+
     if (newScale > maxScale || newScale < minScale) return;
 
     this.setState({ currentScale: newScale }, () => {
