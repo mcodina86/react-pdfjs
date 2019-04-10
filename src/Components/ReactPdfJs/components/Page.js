@@ -67,6 +67,8 @@ export default class Page extends React.Component {
     }
 
     this.setupSizes(() => {
+      if (this.props.sizeChange && this.props.number === 1)
+        this.props.sizeChange();
       if (this.props.display) {
         this.doRender(() => {
           // after rendering the page remove temporal canvas if exists

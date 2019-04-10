@@ -68,18 +68,6 @@
   display: inline-block;
 }
 
-.page-link.is-previous {
-  margin-right: 10px;
-  padding-right: 10px;
-  border-right: 1px solid rgba(76, 76, 76, 0.5);
-}
-
-.page-link.is-next {
-  margin-left: 10px;
-  padding-left: 10px;
-  border-left: 1px solid rgba(76, 76, 76, 0.5);
-}
-
 .page-link button {
   background: transparent;
   border: none;
@@ -87,4 +75,22 @@
   cursor: pointer;
   margin: 0;
   padding: 0;
+}
+
+.toolbar .toolbar__icon {
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.toolbar .toolbar__icon:hover {
+  opacity: 1;
+}
+
+.toolbar .separator {
+  display: inline-block;
+  height: 24px;
+  margin: 0 10px;
+  vertical-align: middle;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
 }

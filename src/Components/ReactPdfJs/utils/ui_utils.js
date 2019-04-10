@@ -61,6 +61,7 @@ export const watchScroll = (viewAreaElement, callback) => {
         state.down = currentY > lastY;
       }
       state.lastY = currentY;
+      state.evt = evt;
       callback(state);
     });
   };

@@ -5,6 +5,7 @@ body {
 }
 
 .viewer {
+  position: relative;
   background: #ccc;
   height: calc(100vh - 50px);
   width: calc(100vw - 10px);
@@ -14,14 +15,13 @@ body {
 }
 
 .pdf {
-  position: relative;
   overflow: auto;
   height: calc(100% - 50px);
 }
 
 .progressbar {
   position: absolute;
-  top: 0;
+  top: 50px;
   left: 0;
   right: 0;
   height: 5px;

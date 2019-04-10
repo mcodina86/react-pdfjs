@@ -3,6 +3,7 @@ const settings = {
   maxScale: 5,
   zoomStep: 0.2,
   currentScale: 1,
+  emptySpace: 75,
   rotation: 0,
   startPage: 1,
   pagesInMemoryBefore: 1,

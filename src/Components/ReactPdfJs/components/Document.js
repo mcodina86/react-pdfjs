@@ -21,7 +21,10 @@ export default class Document extends React.Component {
       pagesIndex: [],
       currentScale: props.settings.currentScale,
       currentRotation: 0,
-      lastY: 0 // Just for prevent bug on manual and automatic scroll
+      firstPageWidth: 0, // for recovering scroll position after zoom
+      firstPageHeight: 0, // for recovering scroll position after zoom
+      lastY: 0, // Just for prevent bug on manual and automatic scroll,
+      lastX: 0
     };
   }
 
@@ -51,7 +54,7 @@ export default class Document extends React.Component {
 
     // Add event listener to scroll. Using pdf.js watchScroll function
     watchScroll(this.pdfRef.current, data => {
-      if (!this.state.forcedScrolling) this.setPageNumberByScroll(data);
+      if (!this.state.forcedScrolling) this.handleScroll(data);
     });
   }
 
@@ -147,10 +150,25 @@ export default class Document extends React.Component {
       });
       this.setState({ pagesIndex, pages }, () => {
         if (this.props.settings.debug) endDebug(start, "Store pages in memory");
-
+        this.storePageSizes();
         this.setPagesToDisplay();
       });
     });
+  };
+
+  /**
+   * Store the first (or desired) page sizes
+   *
+   * @param {number} page Defaults 1
+   */
+  storePageSizes = (page = 1) => {
+    const { pages } = this.state;
+    const pageDiv = pages[page].ref.current.getElementsByTagName("div")[0];
+
+    const firstPageHeight = pageDiv.clientHeight;
+    const firstPageWidth = pageDiv.clientWidth;
+    this.setState({ firstPageHeight, firstPageWidth });
+    return { firstPageHeight, firstPageWidth };
   };
 
   /**
@@ -200,61 +218,59 @@ export default class Document extends React.Component {
    *
    * @param {{}} scrollData Scroll object retrieved by pdf.js watchScroll function
    */
-  setPageNumberByScroll = scrollData => {
+  handleScroll = scrollData => {
     // If it's automatic scroll just prevent execution.
     if (this.state.forcedScrolling) return false;
 
     // If pages positions aren't in cache, just call storeInCachePositions passing
     // this function as callback
     if (!this.state.cachedPositions) {
-      this.storeInCachePositions(() => this.setPageNumberByScroll(scrollData));
+      this.storeInCachePositions(() => this.handleScroll(scrollData));
       return;
     }
 
-    const {
-      pagesIndex,
-      currentPage,
-      cachedPositions,
-      viewerHeight
-    } = this.state;
-
-    let { lastY } = scrollData;
+    let { lastX, lastY } = scrollData;
     // If the lastY position is the same as the current, prevent execution, if not,
     // store the current position in the state.
     // In a future we should delete this, or use a better alternative. It now exists
     // because animateIt function used by goToPate buttons triggers two scroll actions
+    this.setState({ scrollIsToBottom: scrollData.down });
+    if (this.state.lastX !== lastX) this.setState({ lastX });
     if (this.state.lastY !== lastY) {
-      this.setState({ lastY });
-    } else {
-      return;
-    }
-
-    let middle = lastY - viewerHeight / 2.5;
-
-    // Sometimes it doesn't work if you quickly scroll to top
-    if (middle <= 1) {
-      if (currentPage !== 1) {
-        this.setState({ currentPage: 1 });
-        this.setPagesToDisplay();
-      }
-      return;
-    }
-
-    let positions = pagesIndex.map(num => cachedPositions[num].offsetTop);
-
-    let closest = positions.reduce(function(prev, curr) {
-      return Math.abs(curr - middle) < Math.abs(prev - middle) ? curr : prev;
-    });
-
-    if (currentPage !== positions.indexOf(closest) + 1) {
-      this.setState({ currentPage: positions.indexOf(closest) + 1 }, () => {
-        this.setPagesToDisplay();
+      this.setState({ lastY }, () => {
+        this.setPageNumberByScroll();
       });
     }
   };
 
+  setPageNumberByScroll = () => {
+    if (this.state.isZooming) return;
+    const {
+      pagesIndex,
+      cachedPositions,
+      viewerHeight,
+      lastY,
+      scrollIsToBottom
+    } = this.state;
+
+    let range = {
+      top: lastY + viewerHeight / 1.5,
+      bottom: lastY + viewerHeight / 2.5
+    };
+
+    pagesIndex.forEach(num => {
+      var pos = cachedPositions[num].offsetTop;
+      if (pos >= range.bottom && pos < range.top) {
+        let pageNumber = scrollIsToBottom ? num : num - 1;
+        this.setState({ currentPage: pageNumber }, () => {
+          this.setPagesToDisplay();
+        });
+      }
+    });
+  };
+
   /**
-   * We store the pages positions in cache. This cache is used by setPageNumberByScroll
+   * We store the pages positions in cache. This cache is used by handleScroll
    *
    * @param {function} callback Function that will be executed when the function finishes
    */
@@ -279,17 +295,57 @@ export default class Document extends React.Component {
   };
 
   /**
+   * Recover position after zoom
+   */
+  recoverScrollPosition = () => {
+    this.setState({ forcedScrolling: true }, () => {
+      const { emptySpace } = this.props.settings;
+      const oldHeight = this.state.firstPageHeight;
+      const newSizes = this.storePageSizes();
+
+      let pixelsToZoomY = 0;
+      let zoomedPixelsY = 0;
+      let pixelsToZoomX = 0;
+      let zoomedPixelsX = 0;
+
+      const oldOffsetY = this.state.lastY;
+      const oldOffsetX = this.state.lastX;
+
+      const zoomFactorForPage = newSizes.firstPageHeight / oldHeight;
+
+      const partOfPageAboveUpperBorderY =
+        oldOffsetY - (pixelsToZoomY + emptySpace);
+      zoomedPixelsY += Math.round(
+        partOfPageAboveUpperBorderY * zoomFactorForPage
+      );
+
+      const partOfPageAboveUpperBorderX = oldOffsetX - pixelsToZoomX;
+      zoomedPixelsX += Math.round(
+        partOfPageAboveUpperBorderX * zoomFactorForPage
+      );
+      pixelsToZoomX += partOfPageAboveUpperBorderX;
+      pixelsToZoomY += partOfPageAboveUpperBorderY;
+
+      this.pdfRef.current.scrollTop = zoomedPixelsY + emptySpace;
+      this.pdfRef.current.scrollLeft = zoomedPixelsX;
+      this.setState({ forcedScrolling: false });
+    });
+  };
+
+  /**
    * Handles Toolbar's prev and next button actions.
    *
    * @param {boolean} prev If we should go to previous page
    */
   onGoToPage = prev => {
     const { currentPage, totalPages, cachedPositions } = this.state;
+    const { emptySpace } = this.props.settings;
+
     let newPage = prev ? currentPage - 1 : currentPage + 1;
     // if the newPage doesn't exists, quit function
     if (newPage === 0 || newPage > totalPages) return;
 
-    // We set forcedScrolling to true, for preventing setPageNumberByScroll
+    // We set forcedScrolling to true, for preventing handleScroll
     // getting triggered
     this.setState({ forcedScrolling: true });
 
@@ -305,30 +361,45 @@ export default class Document extends React.Component {
 
     const viewer = this.pdfRef.current;
     const offsetTop = cachedPositions[newPage].offsetTop;
-    animateIt(viewer, offsetTop, 75, "easeInOutQuad", 300, () => {
+    animateIt(viewer, offsetTop, emptySpace, "easeInOutQuad", 300, () => {
       // Store lastY position, forcedScrolling to false
-      this.setState({ forcedScrolling: false, lastY: offsetTop - 75 }, () => {
-        // and then update which pages should we render
-        this.setPagesToDisplay();
-      });
+      this.setState(
+        { forcedScrolling: false, lastY: offsetTop - emptySpace },
+        () => {
+          // and then update which pages should we render
+          this.setPagesToDisplay();
+        }
+      );
     });
   };
 
   /**
    * Change the zoom using the current scale and the zoom step
    *
-   * @param {boolean} minus if is zoom out
+   * @param {number} zoomDirection 1 = zoom in, 0 = default zoom, -1 = zoom out
    */
-  onDoZoom = minus => {
+  onDoZoom = zoomDirection => {
     const { minScale, maxScale, zoomStep } = this.props.settings;
+    const defaultScale = this.props.settings.currentScale;
     const { currentScale } = this.state;
-    let newScale = minus ? currentScale - zoomStep : currentScale + zoomStep;
-    if (newScale > maxScale || newScale < minScale) return;
 
-    this.setState({ currentScale: newScale }, () => {
-      window.setTimeout(() => {
-        this.storeInCachePositions();
-      }, 100);
+    let newScale;
+    if (zoomDirection === 0) {
+      newScale = defaultScale;
+    } else if (zoomDirection > 0) {
+      newScale = currentScale + zoomStep;
+    } else {
+      newScale = currentScale - zoomStep;
+    }
+
+    if (newScale > maxScale || newScale < minScale) return;
+    this.setState({ isZooming: true }, () => {
+      this.setState({ currentScale: newScale }, () => {
+        window.setTimeout(() => {
+          this.storeInCachePositions();
+          this.setState({ isZooming: false });
+        }, 100);
+      });
     });
   };
 
@@ -371,8 +442,8 @@ export default class Document extends React.Component {
           rotate={this.onRotate}
           doZoom={this.onDoZoom}
         />
+        <Progressbar loading={loading} />
         <div className="pdf" ref={this.pdfRef}>
-          <Progressbar loading={loading} />
           {pagesIndex.map(num => {
             let page = pages[num];
             return (
@@ -384,6 +455,7 @@ export default class Document extends React.Component {
                   settings={this.props.settings}
                   rotation={currentRotation}
                   scale={currentScale}
+                  sizeChange={this.recoverScrollPosition}
                 />
               </div>
             );
