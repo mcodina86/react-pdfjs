@@ -1,8 +1,7 @@
 import React from "react";
-import HiddenMenu from "./HiddenMenu";
-import HiddenMenuItem from "./HiddenMenuItem";
-import MenuButton from "./MenuButton";
-import Icon from "./Icon";
+import { HiddenMenu, HiddenMenuItem } from "./components/HiddenMenu/";
+import MenuButton from "./components/MenuButton";
+import Icon from "./components/Icon";
 import {
   Zoomin,
   Zoomout,
@@ -11,8 +10,7 @@ import {
   RotateCCW,
   ArrowLeft,
   ArrowRight
-} from "../assets/icons/index";
-import "./Toolbar.css";
+} from "./icons/index";
 
 export default class Toolbar extends React.PureComponent {
   state = { showMenu: false, iconSize: 0.6 };
