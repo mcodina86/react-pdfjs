@@ -1,0 +1,16 @@
+.hidden-menu {
+  position: absolute;
+  background: rgba(0, 0, 0);
+  top: 40px;
+  left: 10px;
+  margin: 0;
+  padding: 5px;
+  z-index: 10;
+}
+
+.hidden-menu__item {
+  display: block;
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+}

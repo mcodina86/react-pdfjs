@@ -186,7 +186,9 @@ export default class Page extends React.Component {
 
     return (
       <div className="page" ref={this.containerRef} style={style}>
-        {display ? <canvas ref={this.canvasRef} {...sizes} /> : null}
+        {display ? (
+          <canvas ref={this.canvasRef} {...sizes} style={style} />
+        ) : null}
       </div>
     );
   }

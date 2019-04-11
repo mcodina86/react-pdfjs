@@ -64,6 +64,10 @@
   text-align: right;
 }
 
+.actions-mobile {
+  display: none;
+}
+
 .page-link {
   display: inline-block;
 }
@@ -93,4 +97,24 @@
   vertical-align: middle;
   width: 1px;
   background: rgba(255, 255, 255, 0.2);
+}
+
+@media screen and (max-width: 800px) {
+  .info {
+    width: 40%;
+  }
+
+  .pages {
+    text-align: right;
+    width: 50%;
+  }
+
+  .actions {
+    display: none;
+  }
+
+  .actions-mobile {
+    width: 10%;
+    display: inline-block;
+  }
 }
