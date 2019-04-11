@@ -1,7 +1,7 @@
 import React from "react";
 import Page from "./Page";
 import Progressbar from "./Progressbar";
-import Toolbar from "./Toolbar";
+import Toolbar from "./Toolbar/";
 import {
   watchScroll,
   getPDFFileNameFromURL,
