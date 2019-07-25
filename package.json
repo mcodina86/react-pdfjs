@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "pdfjs-dist": "^2.0.943",
-    "react": "^16.8.4",
-    "react-dom": "^16.8.4",
+    "pdfjs-dist": "^2.1.266",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
     "react-scripts": "2.1.8"
   },
   "scripts": {
