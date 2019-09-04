@@ -89,18 +89,13 @@ const Document = props => {
   const recoverLostOffset = () => {
     if (!pages) return;
 
-    if (pagesSizeLoaded === totalPages || pagesSizeLoaded === 0) {
-      const pageToUse = pages[1].ref.current;
-      const curr = currentPage === 1 ? 1 : currentPage - 1;
-      const whiteSpace = 40; // TODO
-      const scrollY = pdfRef.current.scrollTop;
+    const pageToUse = pages[1].ref.current;
+    const curr = currentPage === 1 ? 1 : currentPage - 1;
+    const whiteSpace = 40; // TODO
+    const scrollY = pdfRef.current.scrollTop;
 
-      var zoomedPixels = (pageToUse.offsetHeight * props.zoomStep - whiteSpace) * curr;
-      pdfRef.current.scrollTo(null, scrollY + zoomedPixels);
-    } else {
-      console.log("Try again");
-      recoverLostOffset();
-    }
+    var zoomedPixels = (pageToUse.offsetHeight * props.zoomStep - whiteSpace) * curr;
+    pdfRef.current.scrollTo(null, scrollY + zoomedPixels);
   };
 
   const loadFile = () => {
