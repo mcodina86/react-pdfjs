@@ -4,6 +4,15 @@ import pdfjsLib from "pdfjs-dist";
 export const pixelRatio = window.devicePixelRatio || 1;
 
 /**
+ *
+ * @param {function} fx
+ */
+export const setupResizeListener = fx => {
+  window.addEventListener("resize", () => {
+    fx();
+  });
+};
+/**
  * Returns scale factor for the canvas. It makes sense for the HiDPI displays.
  * @return {Object} The object with horizontal (sx) and vertical (sy)
                     scales. The scaled property is set to false if scaling is
@@ -17,13 +26,7 @@ export const getOutputScale = ctx => {
   if (!ctx) {
     backingStoreRatio = 1;
   } else {
-    backingStoreRatio =
-      ctx.webkitBackingStorePixelRatio ||
-      ctx.mozBackingStorePixelRatio ||
-      ctx.msBackingStorePixelRatio ||
-      ctx.oBackingStorePixelRatio ||
-      ctx.backingStorePixelRatio ||
-      1;
+    backingStoreRatio = ctx.webkitBackingStorePixelRatio || ctx.mozBackingStorePixelRatio || ctx.msBackingStorePixelRatio || ctx.oBackingStorePixelRatio || ctx.backingStorePixelRatio || 1;
   }
 
   let pixelRatio = devicePixelRatio / backingStoreRatio;
@@ -32,51 +35,6 @@ export const getOutputScale = ctx => {
     sy: pixelRatio,
     scaled: pixelRatio !== 1
   };
-};
-
-/**
- * Helper function to start monitoring the scroll event and converting them into
- * PDF.js friendly one: with scroll debounce and scroll direction.
- *
- * @author Mozilla Foundation
- */
-export const watchScroll = (viewAreaElement, callback) => {
-  let debounceScroll = function(evt) {
-    if (rAF) {
-      return;
-    }
-    // schedule an invocation of scroll for next animation frame.
-    rAF = window.requestAnimationFrame(function viewAreaElementScrolled() {
-      rAF = null;
-
-      let currentX = viewAreaElement.scrollLeft;
-      let lastX = state.lastX;
-      if (currentX !== lastX) {
-        state.right = currentX > lastX;
-      }
-      state.lastX = currentX;
-      let currentY = viewAreaElement.scrollTop;
-      let lastY = state.lastY;
-      if (currentY !== lastY) {
-        state.down = currentY > lastY;
-      }
-      state.lastY = currentY;
-      state.evt = evt;
-      callback(state);
-    });
-  };
-
-  let state = {
-    right: true,
-    down: true,
-    lastX: viewAreaElement.scrollLeft,
-    lastY: viewAreaElement.scrollTop,
-    _eventHandler: debounceScroll
-  };
-
-  let rAF = null;
-  viewAreaElement.addEventListener("scroll", debounceScroll, true);
-  return state;
 };
 
 /**
@@ -201,18 +159,12 @@ export const isDataSchema = url => {
  * @returns {string} Guessed PDF filename.
  * @author Mozilla Foundation
  */
-export const getPDFFileNameFromURL = (
-  url,
-  defaultFilename = "document.pdf"
-) => {
+export const getPDFFileNameFromURL = (url, defaultFilename = "document.pdf") => {
   if (typeof url !== "string") {
     return defaultFilename;
   }
   if (isDataSchema(url)) {
-    console.warn(
-      "getPDFFileNameFromURL: " +
-        'ignoring "data:" URL for performance reasons.'
-    );
+    console.warn("getPDFFileNameFromURL: ignoring URL for performance reasons.");
     return defaultFilename;
   }
   const reURI = /^(?:(?:[^:]+:)?\/\/[^\/]+)?([^?#]*)(\?[^#]*)?(#.*)?$/;
@@ -220,18 +172,13 @@ export const getPDFFileNameFromURL = (
   // Pattern to get last matching NAME.pdf
   const reFilename = /[^\/?#=]+\.pdf\b(?!.*\.pdf\b)/i;
   let splitURI = reURI.exec(url);
-  let suggestedFilename =
-    reFilename.exec(splitURI[1]) ||
-    reFilename.exec(splitURI[2]) ||
-    reFilename.exec(splitURI[3]);
+  let suggestedFilename = reFilename.exec(splitURI[1]) || reFilename.exec(splitURI[2]) || reFilename.exec(splitURI[3]);
   if (suggestedFilename) {
     suggestedFilename = suggestedFilename[0];
     if (suggestedFilename.includes("%")) {
       // URL-encoded %2Fpath%2Fto%2Ffile.pdf should be file.pdf
       try {
-        suggestedFilename = reFilename.exec(
-          decodeURIComponent(suggestedFilename)
-        )[0];
+        suggestedFilename = reFilename.exec(decodeURIComponent(suggestedFilename))[0];
       } catch (ex) {
         // Possible (extremely rare) errors:
         // URIError "Malformed URI", e.g. for "%AA.pdf"
@@ -301,14 +248,7 @@ export const easings = {
  *
  * @author pawelgrzybek. Edited.
  */
-export const animateIt = (
-  el,
-  destination,
-  headerSize = 0,
-  easing = "linear",
-  duration = 200,
-  callback
-) => {
+export const animateIt = (el, destination, headerSize = 0, easing = "linear", duration = 200, callback) => {
   if ("requestAnimationFrame" in window === false) {
     console.debug("requestAnimationFrame doesn't exists here");
     el.scrollTop = destination - headerSize;
@@ -320,18 +260,13 @@ export const animateIt = (
 
   const currentPosition = el.scrollTop;
 
-  const startTime =
-    "now" in window.performance ? performance.now() : new Date().getTime();
+  const startTime = "now" in window.performance ? performance.now() : new Date().getTime();
 
   function scroll() {
-    const now =
-      "now" in window.performance ? performance.now() : new Date().getTime();
+    const now = "now" in window.performance ? performance.now() : new Date().getTime();
     const time = Math.min(1, (now - startTime) / duration);
     const timeFunction = easings[easing](time);
-    const step = Math.ceil(
-      timeFunction * (destination - currentPosition - headerSize) +
-        currentPosition
-    );
+    const step = Math.ceil(timeFunction * (destination - currentPosition - headerSize) + currentPosition);
     el.scrollTop = step;
 
     if (currentPosition + step === currentPosition + destination - headerSize) {
@@ -362,16 +297,10 @@ export const buildSVG = (viewport, textContent) => {
   textContent.items.forEach(function(textItem) {
     // we have to take in account viewport transform, which includes scale,
     // rotation and Y-axis flip, and not forgetting to flip text.
-    var tx = pdfjsLib.Util.transform(
-      pdfjsLib.Util.transform(viewport.transform, textItem.transform),
-      [1, 0, 0, -1, 0, 0]
-    );
+    var tx = pdfjsLib.Util.transform(pdfjsLib.Util.transform(viewport.transform, textItem.transform), [1, 0, 0, -1, 0, 0]);
     var style = textContent.styles[textItem.fontName];
     // adding text element
-    var text = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "svg:text"
-    );
+    var text = document.createElementNS("http://www.w3.org/2000/svg", "svg:text");
     text.setAttribute("transform", "matrix(" + tx.join(" ") + ")");
     text.setAttribute("font-family", style.fontFamily);
     text.textContent = textItem.str;
@@ -410,4 +339,21 @@ export const buildCanvas = (className, sizes, parent, source) => {
   }
 
   return newCanvas;
+};
+
+/**
+ * Retrieves the closest index in an array
+ * @param {[]} toSearch the array to search
+ * @param {number} toFind the number to find
+ */
+export const closestIndex = (toSearch, toFind) => {
+  var min,
+    chosen = 0;
+  for (var i in toSearch) {
+    min = Math.abs(toSearch[chosen] - toFind);
+    if (Math.abs(toSearch[i] - toFind) < min) {
+      chosen = i;
+    }
+  }
+  return chosen;
 };

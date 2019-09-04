@@ -4,9 +4,9 @@ import getSettings from "./core/settings";
 import "./styles.css";
 
 const ReactPdfJs = props => {
-  const settings = getSettings(props.settings);
+  const settings = getSettings(props);
 
-  return <Document settings={settings} url={props.url} />;
+  return <Document {...settings} />;
 };
 
 export default ReactPdfJs;

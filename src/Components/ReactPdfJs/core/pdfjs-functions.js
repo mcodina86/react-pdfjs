@@ -1,7 +1,8 @@
-import { getOutputScale } from "../utils/ui_utils";
+import { getOutputScale } from "../utils/utils";
 
 export const getViewport = (page, scale, rotation) => {
-  let viewport = page.getViewport(scale, rotation);
+  const options = { scale, rotation };
+  let viewport = page.getViewport(options);
 
   return viewport;
 };
@@ -15,7 +16,7 @@ export const getViewport = (page, scale, rotation) => {
  * @param {Function} callback
  * @param {Function} error
  */
-export const renderPage = (page, canvas, scale, rotation, callback, error) => {
+export const renderPage = (page, canvas, viewport, callback, error) => {
   if (!canvas) {
     console.error("renderPage need a canvas!");
     if (typeof error === "function") error();
@@ -28,9 +29,8 @@ export const renderPage = (page, canvas, scale, rotation, callback, error) => {
     return;
   }
 
-  let canvasContext = canvas.getContext("2d");
+  const canvasContext = canvas.getContext("2d");
   let outputScale = getOutputScale(canvasContext);
-  let viewport = page.getViewport(scale, rotation);
 
   let transform = !outputScale.scaled
     ? null
@@ -41,20 +41,15 @@ export const renderPage = (page, canvas, scale, rotation, callback, error) => {
   canvas.width = viewport.width * outputScale.sx;
   canvas.height = viewport.height * outputScale.sy;
 
-  page
-    .render(renderContext)
-    .then(() => {
-      if (typeof callback === "function") callback(page);
-      /* if (settings.rendering.selectText) {
-          obj.getTextContent().then(textContent => {
-            var svg = buildSVG(viewport, textContent);
-            this.containerRef.current.appendChild(svg);
-          });
-        } */
-      return page;
-    })
-    .catch(err => {
-      console.error(err);
-      if (typeof error === "function") error();
-    });
+  var pageProm = page.render(renderContext).promise;
+
+  pageProm.then(() => {
+    if (typeof callback === "function") callback(page);
+    return page;
+  });
+
+  pageProm.catch(error => {
+    console.error(error);
+    if (typeof error === "function") error();
+  });
 };
