@@ -1,19 +1,14 @@
-import React, { Component } from "react";
+import React from "react";
 import ReactPdfJs from "./Components/ReactPdfJs";
 
-class App extends Component {
-  render() {
-    const settings = {
-      currentScale: 1,
-      debug: true
-    };
+const App = () => {
+  const content = (
+    <div className="App">
+      <ReactPdfJs scale="1" debug="true" />
+    </div>
+  );
 
-    return (
-      <div className="App">
-        <ReactPdfJs settings={settings} />
-      </div>
-    );
-  }
-}
+  return content;
+};
 
 export default App;
