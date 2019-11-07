@@ -1,3 +1,5 @@
+// https://www.youtube.com/watch?v=OvM4hIxrqAw
+
 import React from "react";
 import Toolbar from "./components/toolbar";
 import PdfContext from "./context/pdf-context";
@@ -8,12 +10,12 @@ import pdfjsWorker from "pdfjs-dist/build/pdf.worker.entry";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export default props => {
-  /* const url = props.url || `${process.env.PUBLIC_URL}/assets/example/cuentos.pdf`;
-  console.log(url); 
+  const url = props.url || `/example/cuentos.pdf`;
+  console.log(url);
 
   const file = pdfjs.getDocument(url);
 
-  console.log(file); */
+  console.log(file);
 
   return (
     <PdfContext.Provider>
