@@ -1,0 +1,28 @@
+// Just reset
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body,
+html {
+  min-height: 100vh;
+  min-width: 100vw;
+}
+
+body,
+p,
+h1,
+h2,
+h3,
+h4,
+ul,
+ol {
+  margin: 0;
+}
+
+ul[class],
+ol[class] {
+  list-style: none;
+}

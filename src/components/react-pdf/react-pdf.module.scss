@@ -1,0 +1,12 @@
+@import "./assets/styles/base/colors";
+
+.Component {
+  background: $color-app-bg;
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+
+  * {
+    box-sizing: border-box;
+  }
+}

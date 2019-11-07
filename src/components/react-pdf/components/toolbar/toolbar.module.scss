@@ -1,0 +1,8 @@
+@import "../../assets/styles/base/colors";
+
+.Component {
+  background: $color-toolbar-bg;
+  color: $color-toolbar-txt;
+  line-height: 2.5rem;
+  width: 100%;
+}
